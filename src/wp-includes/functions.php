@@ -2493,145 +2493,35 @@ function wp_check_filetype( $filename, $mimes = null ) {
  *               if original $filename is valid.
  */
 function wp_check_filetype_and_ext( $file, $filename, $mimes = null ) {
-	$proper_filename = false;
-
-	// Do basic extension validation and MIME mapping
+	// Get the extension and assumed mime type from the filename.
 	$wp_filetype = wp_check_filetype( $filename, $mimes );
 	$ext         = $wp_filetype['ext'];
-	$type        = $wp_filetype['type'];
+	$unsafe_type = $wp_filetype['type'];
 
-	// We can't do any further validation without a file to work with
+	// We can't do any further validation without a file to work with.
 	if ( ! file_exists( $file ) ) {
+		$type = $unsafe_type;
+		$proper_filename = false;
 		return compact( 'ext', 'type', 'proper_filename' );
 	}
 
-	$real_mime = false;
+	// Get the real mime type of the file.
+	$type = wp_get_real_file_mime( $file );
 
-	// Validate image types.
-	if ( $type && 0 === strpos( $type, 'image/' ) ) {
-
-		// Attempt to figure out what type of image it actually is
-		$real_mime = wp_get_image_mime( $file );
-
-		if ( $real_mime && $real_mime != $type ) {
-			/**
-			 * Filters the list mapping image mime types to their respective extensions.
-			 *
-			 * @since 3.0.0
-			 *
-			 * @param  array $mime_to_ext Array of image mime types and their matching extensions.
-			 */
-			$mime_to_ext = apply_filters(
-				'getimagesize_mimes_to_exts',
-				array(
-					'image/jpeg' => 'jpg',
-					'image/png'  => 'png',
-					'image/gif'  => 'gif',
-					'image/bmp'  => 'bmp',
-					'image/tiff' => 'tif',
-				)
-			);
-
-			// Replace whatever is after the last period in the filename with the correct extension
-			if ( ! empty( $mime_to_ext[ $real_mime ] ) ) {
-				$filename_parts = explode( '.', $filename );
-				array_pop( $filename_parts );
-				$filename_parts[] = $mime_to_ext[ $real_mime ];
-				$new_filename     = implode( '.', $filename_parts );
-
-				if ( $new_filename != $filename ) {
-					$proper_filename = $new_filename; // Mark that it changed
-				}
-				// Redefine the extension / MIME
-				$wp_filetype = wp_check_filetype( $new_filename, $mimes );
-				$ext         = $wp_filetype['ext'];
-				$type        = $wp_filetype['type'];
-			} else {
-				// Reset $real_mime and try validating again.
-				$real_mime = false;
-			}
-		}
+	// Maybe update the filename based on the mime type.
+	$proper_filename = false;
+	if ( $type != $unsafe_type ) {
+		$proper_filename = wp_maybe_rename_file( $filename, $type );
 	}
 
-	// Validate files that didn't get validated during previous checks.
-	if ( $type && ! $real_mime && extension_loaded( 'fileinfo' ) ) {
-		$finfo     = finfo_open( FILEINFO_MIME_TYPE );
-		$real_mime = finfo_file( $finfo, $file );
-		finfo_close( $finfo );
-
-		// fileinfo often misidentifies obscure files as one of these types
-		$nonspecific_types = array(
-			'application/octet-stream',
-			'application/encrypted',
-			'application/CDFV2-encrypted',
-			'application/zip',
-		);
-
-		/*
-		 * If $real_mime doesn't match the content type we're expecting from the file's extension,
-		 * we need to do some additional vetting. Media types and those listed in $nonspecific_types are
-		 * allowed some leeway, but anything else must exactly match the real content type.
-		 */
-		if ( in_array( $real_mime, $nonspecific_types, true ) ) {
-			// File is a non-specific binary type. That's ok if it's a type that generally tends to be binary.
-			if ( ! in_array( substr( $type, 0, strcspn( $type, '/' ) ), array( 'application', 'video', 'audio' ) ) ) {
-				$type = $ext = false;
-			}
-		} elseif ( 0 === strpos( $real_mime, 'video/' ) || 0 === strpos( $real_mime, 'audio/' ) ) {
-			/*
-			 * For these types, only the major type must match the real value.
-			 * This means that common mismatches are forgiven: application/vnd.apple.numbers is often misidentified as application/zip,
-			 * and some media files are commonly named with the wrong extension (.mov instead of .mp4)
-			 */
-			if ( substr( $real_mime, 0, strcspn( $real_mime, '/' ) ) !== substr( $type, 0, strcspn( $type, '/' ) ) ) {
-				$type = $ext = false;
-			}
-		} elseif ( 'text/plain' === $real_mime ) {
-			// A few common file types are occasionally detected as text/plain; allow those.
-			if ( ! in_array(
-				$type,
-				array(
-					'text/plain',
-					'text/csv',
-					'text/richtext',
-					'text/tsv',
-					'text/vtt',
-				)
-			)
-			) {
-				$type = $ext = false;
-			}
-		} elseif ( 'text/rtf' === $real_mime ) {
-			// Special casing for RTF files.
-			if ( ! in_array(
-				$type,
-				array(
-					'text/rtf',
-					'text/plain',
-					'application/rtf',
-				)
-			)
-			) {
-				$type = $ext = false;
-			}
-		} else {
-			if ( $type !== $real_mime ) {
-				/*
-				 * Everything else including image/* and application/*:
-				 * If the real content type doesn't match the file extension, assume it's dangerous.
-				 */
-				$type = $ext = false;
-			}
-		}
+	// Update the extension if the file is renamed.
+	if ( $proper_filename ) {
+		$ext = pathinfo( $proper_filename, PATHINFO_EXTENSION );
 	}
 
-	// The mime type must be allowed
-	if ( $type ) {
-		$allowed = get_allowed_mime_types();
-
-		if ( ! in_array( $type, $allowed ) ) {
-			$type = $ext = false;
-		}
+	// Unset values for any unallowed types.
+	if ( ! wp_is_file_type_allowed( $ext, $type ) ) {
+		$type = $ext = false;
 	}
 
 	/**
@@ -2649,6 +2539,117 @@ function wp_check_filetype_and_ext( $file, $filename, $mimes = null ) {
 	 * @param string|bool $real_mime                 The actual mime type or false if the type cannot be determined.
 	 */
 	return apply_filters( 'wp_check_filetype_and_ext', compact( 'ext', 'type', 'proper_filename' ), $file, $filename, $mimes, $real_mime );
+}
+
+/**
+ * Return the mime type of a file.
+ *
+ * @since X.X.X
+ *
+ * @param string $file Full path to the file to be checked.
+ * @return string The mime type value. Note that 'application/octet-stream' is a generic file.
+ */
+function wp_get_real_file_mime( $file ) {
+	$real_type = false;
+
+	// Determine the filetype
+	$ext =  pathinfo( $file, PATHINFO_EXTENSION );
+	$type = wp_ext2type( $ext );
+
+	// First try to get the mime of images in a performant way.
+	if ( 'image' === $type ) {
+		$real_type = wp_get_image_mime( $file );
+	}
+
+	// Try to validate the file if we don't have a real mime already.
+	if (
+		( ! $real_type || $real_type === 'application/octet-stream' )
+		&& extension_loaded( 'fileinfo' )
+	) {
+		$finfo = finfo_open( FILEINFO_MIME_TYPE );
+		$real_type = finfo_file( $finfo, $file );
+		finfo_close( $finfo );
+	}
+
+	// An 'application/octet-stream' value means the mime type could not be determined.
+	if ( ! $real_type ) {
+		$real_type = 'application/octet-stream';
+	}
+
+	return $real_type;
+}
+
+
+/**
+ * Determine if this extension and mime pair are safe.
+ *
+ * This should only return true if the extenstion and type are both supported together.
+ *
+ * @since X.X.X
+ *
+ * @return bool Whether the pair is safe to upload.
+ */
+function wp_is_file_type_allowed( $ext, $type ) {
+	// fileinfo often misidentifies obscure files as one of these types
+	$nonspecific_types = array(
+		'application/octet-stream',
+		'application/encrypted',
+		'application/zip',
+	);
+
+	if ( in_array( $type, $nonspecific_types, true ) ) {
+		return false;
+	}
+
+	$allowed = wp_get_allowed_file_types();
+
+	return ( isset( $allowed[$ext] ) && in_array( $type, $allowed[$ext] ) );
+}
+
+/**
+ * Fix the extension on some media filenames based on actual mime type.
+ *
+ * @since X.X.X
+ *
+ * @param string $filename The filename of the file.
+ * @param string $type     The mime type of the file.
+ * @return string|false A corrected filename or false if the filename was unchanged.
+ */
+function wp_maybe_rename_file( $filename, $type ) {
+	$proper_filename = false;
+
+	/**
+	 * Filters the list mapping image mime types to their respective extensions.
+	 *
+	 * @since 3.0.0
+	 *
+	 * @param  array $mime_to_ext Array of image mime types and their matching extensions.
+	 */
+	$mime_to_ext = apply_filters( 'getimagesize_mimes_to_exts', array(
+		'image/jpeg' => 'jpg',
+		'image/png'  => 'png',
+		'image/gif'  => 'gif',
+		'image/bmp'  => 'bmp',
+		'image/tiff' => 'tif',
+	) );
+
+	// Replace whatever is after the last period in the filename with the correct extension
+	if ( ! empty( $mime_to_ext[ $type ] ) ) {
+		$filename_parts = explode( '.', $filename );
+		array_pop( $filename_parts );
+
+		// Only rename files that had an extension to begin with.
+		if ( ! empty( $filename_parts ) ) {
+			$filename_parts[] = $mime_to_ext[ $type ];
+			$new_filename = implode( '.', $filename_parts );
+
+			if ( $new_filename != $filename ) {
+				$proper_filename = $new_filename; // Mark that it changed
+			}
+		}
+	}
+
+	return $proper_filename;
 }
 
 /**
@@ -2685,14 +2686,812 @@ function wp_get_image_mime( $file ) {
 }
 
 /**
+ * Get a list of extensions and relative mime types.
+ *
+ * @since X.X.X
+ *
+ * @return array A multidimensional array containing file extensions and mime types.
+ */
+function wp_get_file_types() {
+
+	$mime_map = array(
+		// Image formats.
+		'jpg' => array(
+			'image/jpeg',
+			'image/pjpeg',
+		),
+		'jpeg' => array(
+			'image/jpeg',
+			'image/pjpeg',
+		),
+		'jpe' => array(
+			'image/jpeg',
+			'image/pjpeg',
+		),
+		'gif' => array(
+			'image/gif',
+
+		),
+		'png' => array(
+			'image/png',
+			'image/vnd.mozilla.apng',
+		),
+		'bmp' => array(
+			'image/bmp',
+			'image/x-bmp',
+			'image/x-ms-bmp',
+		),
+		'tiff' => array(
+			'image/tiff',
+		),
+		'tif' => array(
+			'image/tiff',
+		),
+		'ico' => array(
+			'application/ico',
+			'image/ico',
+			'image/icon',
+			'image/vnd.microsoft.icon',
+			'image/x-ico',
+			'image/x-icon',
+			'text/ico',
+		),
+		// Video formats.
+		'asf' => array(
+			'application/vnd.ms-asf',
+			'video/x-ms-asf',
+			'video/x-ms-asf-plugin',
+			'video/x-ms-wm',
+		),
+		'asx' => array(
+			'application/x-ms-asx',
+			'application/xml',
+			'audio/x-ms-asx',
+			'video/x-ms-asf',
+			'video/x-ms-wax',
+			'video/x-ms-wmx',
+			'video/x-ms-wvx',
+		),
+		'wmv' => array(
+			'application/vnd.ms-asf',
+			'video/x-ms-asf',
+			'video/x-ms-wmv',
+		),
+		'wmx' => array(
+			'application/x-ms-asx',
+			'audio/x-ms-asx',
+			'video/x-ms-wax',
+			'video/x-ms-wmx',
+			'video/x-ms-wvx',
+		),
+		'wm' => array(
+			'video/x-ms-wm',
+		),
+		'avi' => array(
+			'video/avi',
+			'video/divx',
+			'video/msvideo',
+			'video/vnd.divx',
+			'video/x-avi',
+			'video/x-msvideo',
+		),
+		'divx' => array(
+			'video/avi',
+			'video/divx',
+			'video/msvideo',
+			'video/vnd.divx',
+			'video/x-avi',
+			'video/x-msvideo',
+		),
+		'flv' => array(
+			'application/x-flash-video',
+			'flv-application/octet-stream',
+			'video/flv',
+			'video/x-flv',
+		),
+		'mov' => array(
+			'application/quicktime',
+			'video/quicktime',
+		),
+		'qt' => array(
+			'application/quicktime',
+			'video/quicktime',
+		),
+		'mpeg' => array(
+			'video/mpeg',
+			'video/mpeg-system',
+			'video/x-mpeg',
+			'video/x-mpeg-system',
+			'video/x-mpeg2',
+		),
+		'mpg' => array(
+			'video/mpeg',
+			'video/mpeg-system',
+			'video/x-mpeg',
+			'video/x-mpeg-system',
+			'video/x-mpeg2',
+		),
+		'mpe' => array(
+			'video/mpeg',
+			'video/mpeg-system',
+			'video/x-mpeg',
+			'video/x-mpeg-system',
+			'video/x-mpeg2',
+		),
+		'mp4' => array(
+			'video/mp4',
+			'video/mp4v-es',
+			'video/quicktime',
+			'video/vnd.objectvideo',
+			'video/x-m4v',
+		),
+		'm4v' => array(
+			'video/mp4',
+			'video/mp4v-es',
+			'video/x-m4v',
+		),
+		'ogv' => array(
+			'application/ogg',
+			'video/ogg',
+			'video/x-ogg',
+		),
+		'webm' => array(
+			'application/x-matroska',
+			'video/webm',
+		),
+		'mkv' => array(
+			'application/x-matroska',
+			'video/x-matroska',
+		),
+		'3gp' => array( // Can also be audio
+			'audio/3gpp',
+			'audio/3gpp-encrypted',
+			'audio/x-rn-3gpp-amr',
+			'audio/x-rn-3gpp-amr-encrypted',
+			'audio/x-rn-3gpp-amr-wb',
+			'audio/x-rn-3gpp-amr-wb-encrypted',
+			'video/3gp',
+			'video/3gpp',
+			'video/3gpp-encrypted',
+			'video/mp4',
+		),
+		'3gpp' => array( // Can also be audio
+			'audio/3gpp',
+			'audio/3gpp-encrypted',
+			'audio/x-rn-3gpp-amr',
+			'audio/x-rn-3gpp-amr-encrypted',
+			'audio/x-rn-3gpp-amr-wb',
+			'audio/x-rn-3gpp-amr-wb-encrypted',
+			'video/3gp',
+			'video/3gpp',
+			'video/3gpp-encrypted',
+			'video/mp4',
+		),
+		'3g2' => array( // Can also be audio
+			'audio/3gpp2',
+			'video/3gpp2',
+			'video/mp4',
+		),
+		'3gp2' => array( // Can also be audio
+			'audio/3gpp2',
+			'video/3gpp2',
+			'video/mp4',
+		),
+		// Text formats.
+		'txt' => array(
+			'text/plain',
+			'text/prs.fallenstein.rst',
+			'text/prs.prop.logic',
+		),
+		'asc' => array(
+			'application/pgp',
+			'application/pgp-encrypted',
+			'application/pgp-keys',
+			'application/pgp-signature',
+			'text/plain',
+		),
+		'c' => array(
+			'text/plain',
+			'text/x-c',
+		),
+		'cc' => array(
+			'text/plain',
+			'text/x-c',
+			'text/x-c++src',
+			'text/x-csrc',
+		),
+		'h' => array(
+			'text/plain',
+			'text/x-c'
+		),
+		'srt' => array(
+			'application/x-srt',
+			'application/x-subrip',
+			'text/plain',
+		),
+		'csv' => array(
+			'text/csv',
+			'text/plain',
+			'text/x-comma-separated-values',
+			'text/x-csv',
+		),
+		'tsv' => array(
+			'text/tab-separated-values',
+			'text/plain',
+		),
+		'ics' => array(
+			'application/ics',
+			'text/calendar',
+			'text/plain',
+			'text/x-vcalendar',
+		),
+		'rtx' => array(
+			'text/plain',
+			'text/richtext',
+		),
+		'css' => array(
+			'text/css',
+			'text/plain',
+		),
+		'htm' => array(
+			'application/xhtml+xml',
+			'application/xml',
+			'text/html',
+			'text/plain',
+		),
+		'html' => array(
+			'application/vnd.dtg.local.html',
+			'application/xhtml+xml',
+			'application/xml',
+			'text/html',
+			'text/plain',
+		),
+		'vtt' => array(
+			'text/plain',
+			'text/vtt',
+		),
+		'dfxp' => array(
+			'application/ttaf+xml',
+			'text/dfxp',
+		),
+		// Audio formats.
+		'mp3' => array(
+			'audio/mp3',
+			'audio/mpeg',
+			'audio/x-mp3',
+			'audio/x-mpeg',
+			'audio/x-mpg',
+		),
+		'm4a' => array(
+			'application/quicktime',
+			'audio/m4a',
+			'audio/mp4',
+			'audio/x-m4a',
+			'audio/x-mp4a',
+		),
+		'm4b' => array(
+			'application/quicktime',
+			'audio/mp4',
+			'audio/x-m4a',
+			'audio/x-m4b',
+			'audio/x-mp4a',
+		),
+		'aac' => array(
+			'audio/aac',
+			'audio/x-aac',
+			'audio/x-hx-aac-adts',
+		),
+		'ra' => array(
+			'audio/vnd.m-realaudio',
+			'audio/vnd.rn-realaudio',
+			'audio/x-pn-realaudio',
+			'audio/x-realaudio',
+		),
+		'ram' => array(
+			'application/ram',
+			'audio/x-pn-realaudio',
+			'audio/x-realaudio',
+		),
+		'wav' => array(
+			'audio/vnd.dts',
+			'audio/vnd.wave',
+			'audio/wav',
+			'audio/wave',
+			'audio/x-wav',
+		),
+		'ogg' => array( // Can also be video.
+			'application/ogg',
+			'application/x-ogg',
+			'audio/ogg',
+			'audio/vorbis',
+			'audio/x-flac+ogg',
+			'audio/x-ogg',
+			'audio/x-oggflac',
+			'audio/x-speex+ogg',
+			'audio/x-vorbis',
+			'audio/x-vorbis+ogg',
+			'video/ogg',
+			'video/x-ogg',
+			'video/x-theora',
+			'video/x-theora+ogg',
+		),
+		'oga' => array(
+			'application/ogg',
+			'audio/ogg',
+			'audio/vorbis',
+			'audio/x-flac+ogg',
+			'audio/x-ogg',
+			'audio/x-oggflac',
+			'audio/x-speex+ogg',
+			'audio/x-vorbis',
+			'audio/x-vorbis+ogg',
+		),
+		'flac' => array(
+			'audio/flac',
+			'audio/x-flac',
+		),
+		'mid' => array(
+			'audio/midi',
+			'audio/sp-midi',
+			'audio/x-midi',
+		),
+		'midi' => array(
+			'audio/midi',
+			'audio/x-midi',
+		),
+		'wma' => array(
+			'application/vnd.ms-asf',
+			'audio/wma',
+			'audio/x-ms-wma',
+			'video/x-ms-asf',
+		),
+		'wax' => array(
+			'application/x-ms-asx',
+			'audio/x-ms-asx',
+			'audio/x-ms-wax',
+			'video/x-ms-wax',
+			'video/x-ms-wmx',
+			'video/x-ms-wvx',
+		),
+		'mka' => array(
+			'application/x-matroska',
+			'audio/x-matroska',
+		),
+		// Misc application formats.
+		'rtf' => array(
+			'application/rtf',
+			'text/plain',
+			'text/rtf',
+		),
+		'js' => array(
+			'application/ecmascript',
+			'application/javascript',
+			'application/node',
+			'application/x-javascript',
+			'text/javascript',
+			'text/plain',
+		),
+		'pdf' => array(
+			'application/acrobat',
+			'application/nappdf',
+			'application/pdf',
+			'application/x-pdf',
+			'image/pdf',
+		),
+		'swf' => array(
+			'application/futuresplash',
+			'application/vnd.adobe.flash.movie',
+			'application/x-shockwave-flash',
+		),
+		'class' => array(
+			'application/java',
+			'application/java-byte-code',
+			'application/java-vm',
+			'application/vnd.dvb.dvbj',
+			'application/x-java',
+			'application/x-java-class',
+			'application/x-java-vm',
+		),
+		'tar' => array(
+			'application/x-gtar',
+			'application/x-tar',
+		),
+		'zip' => array(
+			'application/vnd.easykaraoke.cdgdownload',
+			'application/vnd.gov.sk.e-form+zip',
+			'application/x-zip',
+			'application/x-zip-compressed',
+			'application/zip',
+		),
+		'gz' => array(
+			'application/gzip',
+			'application/gzip-compressed',
+			'application/gzipped',
+			'application/x-gunzip',
+			'application/x-gzip',
+			'application/x-gzip-compressed',
+			'gzip/document',
+		),
+		'gzip' => array(
+			'application/gzip',
+			'application/gzip-compressed',
+			'application/gzipped',
+			'application/x-gunzip',
+			'application/x-gzip',
+			'application/x-gzip-compressed',
+			'gzip/document',
+		),
+		'rar' => array(
+			'application/vnd.rar',
+			'application/x-rar',
+			'application/x-rar-compressed',
+		),
+		'7z' => array(
+			'application/x-7z-compressed',
+		),
+		'exe' => array(
+			'application/octet-stream',
+			'application/x-dosexec',
+			'application/x-ms-dos-executable',
+			'application/x-msdownload',
+		),
+		'psd' => array(
+			'application/photoshop',
+			'application/x-photoshop',
+			'image/photoshop',
+			'image/psd',
+			'image/vnd.adobe.photoshop',
+			'image/x-photoshop',
+			'image/x-psd',
+		),
+		'xcf' => array(
+			'image/x-xcf',
+			'image/xcf',
+		),
+		// MS Office formats.
+		'doc' => array(
+			'application/msword',
+			'application/vnd.ms-office',
+			'application/vnd.ms-word',
+			'application/x-msword',
+			'application/x-ole-storage',
+			'application/xml',
+			'zz-application/zz-winassoc-doc',
+		),
+		'pot' => array(
+			'application/mspowerpoint',
+			'application/powerpoint',
+			'application/vnd.ms-office',
+			'application/vnd.ms-powerpoint',
+			'application/x-mspowerpoint',
+			'text/plain',
+			'text/x-gettext-translation-template',
+			'text/x-pot',
+		),
+		'pps' => array(
+			'application/mspowerpoint',
+			'application/powerpoint',
+			'application/vnd.ms-office',
+			'application/vnd.ms-powerpoint',
+			'application/x-mspowerpoint',
+		),
+		'ppt' => array(
+			'application/mspowerpoint',
+			'application/powerpoint',
+			'application/vnd.ms-office',
+			'application/vnd.ms-powerpoint',
+			'application/x-mspowerpoint',
+		),
+		'wri' => array(
+			'application/vnd.ms-write',
+			'application/x-mswrite',
+		),
+		'xla' => array(
+			'application/msexcel',
+			'application/vnd.ms-excel',
+			'application/vnd.ms-office',
+			'application/x-msexcel',
+			'application/xml',
+			'zz-application/zz-winassoc-xls',
+		),
+		'xls' => array(
+			'application/msexcel',
+			'application/vnd.ms-excel',
+			'application/vnd.ms-office',
+			'application/x-msexcel',
+			'application/xml',
+			'zz-application/zz-winassoc-xls',
+		),
+		'xlt' => array(
+			'application/msexcel',
+			'application/vnd.ms-excel',
+			'application/vnd.ms-office',
+			'application/x-msexcel',
+			'application/xml',
+			'zz-application/zz-winassoc-xls',
+		),
+		'xlw' => array(
+			'application/msexcel',
+			'application/vnd.ms-excel',
+			'application/vnd.ms-office',
+			'application/x-msexcel',
+			'application/xml',
+			'zz-application/zz-winassoc-xls',
+		),
+		'mdb' => array(
+			'application/mdb',
+			'application/msaccess',
+			'application/vnd.ms-access',
+			'application/vnd.msaccess',
+			'application/x-mdb',
+			'application/x-msaccess',
+			'zz-application/zz-winassoc-mdb',
+		),
+		'mpp' => array(
+			'application/vnd.ms-project',
+			'audio/x-musepack',
+		),
+		'docx' => array(
+			'application/vnd.ms-office',
+			'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+			'application/zip',
+		),
+		'docm' => array(
+			'application/vnd.ms-office',
+			'application/vnd.ms-word.document.macroenabled.12',
+			'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+			'application/xml',
+		),
+		'dotx' => array(
+			'application/vnd.ms-office',
+			'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+			'application/zip',
+		),
+		'dotm' => array(
+			'application/vnd.ms-office',
+			'application/vnd.ms-word.template.macroenabled.12',
+			'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+			'application/xml',
+		),
+		'xlsx' => array(
+			'application/vnd.ms-office',
+			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+			'application/zip',
+		),
+		'xlsm' => array(
+			'application/vnd.ms-excel.sheet.macroenabled.12',
+			'application/vnd.ms-office',
+			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+			'application/zip',
+		),
+		'xlsb' => array(
+			'application/vnd.ms-excel.sheet.binary.macroenabled.12',
+			'application/vnd.ms-office',
+			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+			'application/xml',
+		),
+		'xltx' => array(
+			'application/vnd.ms-office',
+			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+			'application/vnd.openxmlformats-officedocument.spreadsheetml.template',
+			'application/zip',
+		),
+		'xltm' => array(
+			'application/vnd.ms-excel.template.macroenabled.12',
+			'application/vnd.ms-office',
+			'application/vnd.openxmlformats-officedocument.spreadsheetml.template',
+			'application/xml',
+		),
+		'xlam' => array(
+			'application/vnd.ms-excel.addin.macroenabled.12',
+			'application/vnd.ms-office',
+			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+			'application/xml',
+		),
+		'pptx' => array(
+			'application/vnd.ms-office',
+			'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+			'application/zip',
+		),
+		'pptm' => array(
+			'application/vnd.ms-office',
+			'application/vnd.ms-powerpoint.presentation.macroenabled.12',
+			'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+		),
+		'ppsx' => array(
+			'application/vnd.ms-office',
+			'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
+			'application/zip',
+		),
+		'ppsm' => array(
+			'application/vnd.ms-office',
+			'application/vnd.ms-powerpoint.slideshow.macroenabled.12',
+			'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
+		),
+		'potx' => array(
+			'application/vnd.ms-office',
+			'application/vnd.openxmlformats-officedocument.presentationml.template',
+			'application/zip',
+		),
+		'potm' => array(
+			'application/vnd.ms-office',
+			'application/vnd.ms-powerpoint.template.macroenabled.12',
+			'application/vnd.openxmlformats-officedocument.presentationml.template',
+		),
+		'ppam' => array(
+			'application/vnd.ms-office',
+			'application/vnd.ms-powerpoint.addin.macroenabled.12',
+		),
+		'sldx' => array(
+			'application/vnd.ms-office',
+			'application/vnd.openxmlformats-officedocument.presentationml.slide',
+			'application/zip',
+		),
+		'sldm' => array(
+			'application/vnd.ms-office',
+			'application/vnd.ms-powerpoint.slide.macroenabled.12',
+			'application/vnd.openxmlformats-officedocument.presentationml.slide',
+		),
+		'onetoc' => array(
+			'application/onenote',
+			'application/onenoteformatonetoc2',
+		),
+		'onetoc2' => array(
+			'application/onenote',
+			'application/onenoteformatonetoc2',
+		),
+		'onetmp' => array(
+			'application/msonenote',
+			'application/onenote',
+		),
+		'onepkg' => array(
+			'application/onenote',
+			'application/onenoteformatpackage',
+			'application/vnd.ms-cab-compressed',
+		),
+		'oxps' => array(
+			'application/oxps',
+			'application/vnd.ms-xpsdocument',
+			'application/xps',
+			'application/zip',
+		),
+		'xps' => array(
+			'application/oxps',
+			'application/vnd.ms-xpsdocument',
+			'application/xps',
+			'application/zip',
+		),
+		// OpenOffice formats.
+		'odt' => array(
+			'application/vnd.oasis.opendocument.text',
+			'application/x-vnd.oasis.opendocument.text',
+			'application/zip',
+		),
+		'odp' => array(
+			'application/vnd.oasis.opendocument.presentation',
+			'application/x-vnd.oasis.opendocument.presentation',
+			'application/zip',
+		),
+		'ods' => array(
+			'application/vnd.oasis.opendocument.spreadsheet',
+			'application/x-vnd.oasis.opendocument.spreadsheet',
+			'application/zip',
+		),
+		'odg' => array(
+			'application/vnd.oasis.opendocument.graphics',
+			'application/x-vnd.oasis.opendocument.graphics',
+			'application/zip',
+		),
+		'odc' => array(
+			'application/vnd.oasis.opendocument.chart',
+			'application/x-vnd.oasis.opendocument.chart',
+			'application/zip',
+		),
+		'odb' => array(
+			'application/vnd.oasis.opendocument.base',
+			'application/vnd.oasis.opendocument.database',
+			'application/vnd.sun.xml.base',
+			'application/zip',
+		),
+		'odf' => array(
+			'application/vnd.oasis.opendocument.formula',
+			'application/x-vnd.oasis.opendocument.formula',
+			'application/zip',
+		),
+		// WordPerfect formats.
+		'wp' => array(
+			'application/vnd.wordperfect',
+			'application/wordperfect',
+			'application/x-wordperfect',
+		),
+		'wpd' => array(
+			'application/vnd.wordperfect',
+			'application/wordperfect',
+			'application/x-wordperfect',
+		),
+		// iWork formats.
+		'key' => array(
+			'application/vnd.apple.iwork',
+			'application/vnd.apple.keynote',
+			'application/x-iwork-keynote-sffkey',
+			'application/zip',
+		),
+		'numbers' => array(
+			'application/vnd.apple.iwork',
+			'application/vnd.apple.numbers',
+		),
+		'pages' => array(
+			'application/vnd.apple.iwork',
+			'application/vnd.apple.pages',
+		),
+	);
+
+	// Backwards compatibility for plugins/themes adding mime types.
+	$extra_mimes = array();
+
+	// Handle code filtering the old mime type list.
+	if ( has_filter( 'mime_types' ) ) {
+		/**
+		 * Documented in wp_get_mime_types();
+		 *
+		 * Used to get the return value of anything added via the filter.
+		 */
+		$extra_mimes = apply_filters( 'mime_types', $extra_mimes );
+	}
+
+	// Many plugins add mimes via the 'upload_mimes' filter.
+	if ( has_filter( 'upload_mimes' ) ) {
+		/**
+		 * Documented in get_allowed_mime_types();
+		 *
+		 * Used to get the return value of anything added via the filter.
+		 */
+		$extra_mimes = apply_filters( 'upload_mimes', $extra_mimes, null );
+	}
+
+
+	/*
+	 * Loop through any extra mimes added via filters and convert them
+	 * to the new multidimentional array format.
+	 */
+	foreach( $extra_mimes as $ext_preg => $mime_val ) {
+		// Convert any regex patterns to an array of extensions.
+		$extensions = explode( '|', $ext_preg );
+
+		// Add extra mimes to the extension, whether it exists or not.
+		foreach( $extensions as $ext ) {
+			$mime_map[ $ext ][] = $mime_val;
+		}
+	}
+
+	/**
+	 * Filters the list of file extensions and mime types.
+	 *
+	 * This filter should be used to add, not remove, mime types. To remove
+	 * mime types, use the {@see 'wp_allowed_mimes'} filter.
+	 *
+	 * @since X.X.X
+	 *
+	 * @param array $mime_map File extensions and their corresponding mime types.
+	 *
+	 */
+	return apply_filters( 'wp_mimes', $mime_map );
+}
+
+/**
  * Retrieve list of mime types and file extensions.
  *
  * @since 3.5.0
  * @since 4.2.0 Support was added for GIMP (xcf) files.
+ * @deprecated X.X.X Use wp_get_file_types()
+ * @see wp_get_file_types()
+
  *
  * @return array Array of mime types keyed by the file extension regex corresponding to those types.
  */
 function wp_get_mime_types() {
+	// _deprecated_function( __FUNCTION__, 'X.X.X', 'wp_get_file_types()' );
+
 	/**
 	 * Filters the list of mime types and file extensions.
 	 *
@@ -2848,6 +3647,43 @@ function wp_get_ext_types() {
 }
 
 /**
+ * Retrieve list of allowed file types and corresponding mime types.
+ *
+ * @since X.X.X
+ *
+ * @param int|WP_User $user Optional. User to check. Defaults to current user.
+ * @return array Array of mime types keyed by the file extension regex corresponding
+ *               to those types.
+ */
+function wp_get_allowed_file_types( $user = null ) {
+	$mimes = wp_get_file_types();
+
+	// Flash and executables are never allowed.
+	unset( $mimes['swf'], $mimes['exe'] );
+
+	// See if the user has unfiltered_html capabilities.
+	$unfiltered_html = $user ? user_can( $user, 'unfiltered_html' ) : current_user_can( 'unfiltered_html' );
+
+	// Apply extension restrictions for users without 'unfiltered_html' caps.
+	if ( ! $unfiltered_html ) {
+		unset( $mimes['htm'], $mimes['html'], $mimes['js'] );
+	}
+
+	/**
+	 * Filters list of allowed mime types and file extensions.
+	 *
+	 * @since X.X.X
+	 *
+	 * @param array            $mimes List of allowed file types by extension and corresponding mime
+	 *                                types that are supported for each extension. Note that 'swf'
+	 *                                and 'exe' are never supported. 'htm', 'html', and 'js' are only
+	 *                                supported for users with unfiltered_html capabilities.
+	 * @param int|WP_User|null $user  User ID, User object or null if not provided (indicates current user).
+	 */
+	return apply_filters( 'wp_allowed_file_types', $mimes, $user );
+}
+
+/**
  * Retrieve list of allowed mime types and file extensions.
  *
  * @since 2.8.6
@@ -2857,6 +3693,8 @@ function wp_get_ext_types() {
  *               to those types.
  */
 function get_allowed_mime_types( $user = null ) {
+	// _deprecated_function( __FUNCTION__, 'X.X.X', 'wp_get_allowed_file_types()' );
+
 	$t = wp_get_mime_types();
 
 	unset( $t['swf'], $t['exe'] );
