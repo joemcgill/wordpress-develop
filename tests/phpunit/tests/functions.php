@@ -1342,6 +1342,54 @@ class Tests_Functions extends WP_UnitTestCase {
 					'proper_filename' => false,
 				),
 			),
+			// Non-image file not allowed even if it's named like one.
+			array(
+				DIR_TESTDATA . '/export/crazy-cdata.xml',
+				'crazy-cdata.jpg',
+				array(
+					'ext' => false,
+					'type' => false,
+					'proper_filename' => false,
+				),
+			),
+			// Non-image file not allowed if it's named like something else.
+			array(
+				DIR_TESTDATA . '/export/crazy-cdata.xml',
+				'crazy-cdata.doc',
+				array(
+					'ext' => false,
+					'type' => false,
+					'proper_filename' => false,
+				),
+			),
+			// Assorted text/* sample files
+			array(
+				DIR_TESTDATA . '/uploads/test.vtt',
+				'test.vtt',
+				array(
+					'ext' => 'vtt',
+					'type' => 'text/vtt',
+					'proper_filename' => false,
+				),
+			),
+			array(
+				DIR_TESTDATA . '/uploads/test.dfxp',
+				'test.dfxp',
+				array(
+					'ext' => 'dfxp',
+					'type' => 'text/dfxp',
+					'proper_filename' => false,
+				),
+			),
+			array(
+				DIR_TESTDATA . '/uploads/test.csv',
+				'test.csv',
+				array(
+					'ext' => 'csv',
+					'type' => 'text/csv',
+					'proper_filename' => false,
+				),
+			),
 		);
 
 		// Test a few additional file types on single sites.
