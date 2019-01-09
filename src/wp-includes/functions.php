@@ -2500,7 +2500,7 @@ function wp_check_filetype_and_ext( $file, $filename, $mimes = null ) {
 
 	// We can't do any further validation without a file to work with.
 	if ( ! file_exists( $file ) ) {
-		$type = $unsafe_type;
+		$type            = $unsafe_type;
 		$proper_filename = false;
 		return compact( 'ext', 'type', 'proper_filename' );
 	}
@@ -2553,7 +2553,7 @@ function wp_get_real_file_mime( $file ) {
 	$real_type = false;
 
 	// Determine the filetype
-	$ext =  pathinfo( $file, PATHINFO_EXTENSION );
+	$ext  = pathinfo( $file, PATHINFO_EXTENSION );
 	$type = wp_ext2type( $ext );
 
 	// First try to get the mime of images in a performant way.
@@ -2566,7 +2566,7 @@ function wp_get_real_file_mime( $file ) {
 		( ! $real_type || $real_type === 'application/octet-stream' )
 		&& extension_loaded( 'fileinfo' )
 	) {
-		$finfo = finfo_open( FILEINFO_MIME_TYPE );
+		$finfo     = finfo_open( FILEINFO_MIME_TYPE );
 		$real_type = finfo_file( $finfo, $file );
 		finfo_close( $finfo );
 	}
@@ -2603,7 +2603,7 @@ function wp_is_file_type_allowed( $ext, $type ) {
 
 	$allowed = wp_get_allowed_file_types();
 
-	return ( isset( $allowed[$ext] ) && in_array( $type, $allowed[$ext] ) );
+	return ( isset( $allowed[ $ext ] ) && in_array( $type, $allowed[ $ext ] ) );
 }
 
 /**
@@ -2625,13 +2625,16 @@ function wp_maybe_rename_file( $filename, $type ) {
 	 *
 	 * @param  array $mime_to_ext Array of image mime types and their matching extensions.
 	 */
-	$mime_to_ext = apply_filters( 'getimagesize_mimes_to_exts', array(
-		'image/jpeg' => 'jpg',
-		'image/png'  => 'png',
-		'image/gif'  => 'gif',
-		'image/bmp'  => 'bmp',
-		'image/tiff' => 'tif',
-	) );
+	$mime_to_ext = apply_filters(
+		'getimagesize_mimes_to_exts',
+		array(
+			'image/jpeg' => 'jpg',
+			'image/png'  => 'png',
+			'image/gif'  => 'gif',
+			'image/bmp'  => 'bmp',
+			'image/tiff' => 'tif',
+		)
+	);
 
 	// Replace whatever is after the last period in the filename with the correct extension
 	if ( ! empty( $mime_to_ext[ $type ] ) ) {
@@ -2641,7 +2644,7 @@ function wp_maybe_rename_file( $filename, $type ) {
 		// Only rename files that had an extension to begin with.
 		if ( ! empty( $filename_parts ) ) {
 			$filename_parts[] = $mime_to_ext[ $type ];
-			$new_filename = implode( '.', $filename_parts );
+			$new_filename     = implode( '.', $filename_parts );
 
 			if ( $new_filename != $filename ) {
 				$proper_filename = $new_filename; // Mark that it changed
@@ -2696,38 +2699,38 @@ function wp_get_file_types() {
 
 	$mime_map = array(
 		// Image formats.
-		'jpg' => array(
+		'jpg'     => array(
 			'image/jpeg',
 			'image/pjpeg',
 		),
-		'jpeg' => array(
+		'jpeg'    => array(
 			'image/jpeg',
 			'image/pjpeg',
 		),
-		'jpe' => array(
+		'jpe'     => array(
 			'image/jpeg',
 			'image/pjpeg',
 		),
-		'gif' => array(
+		'gif'     => array(
 			'image/gif',
 
 		),
-		'png' => array(
+		'png'     => array(
 			'image/png',
 			'image/vnd.mozilla.apng',
 		),
-		'bmp' => array(
+		'bmp'     => array(
 			'image/bmp',
 			'image/x-bmp',
 			'image/x-ms-bmp',
 		),
-		'tiff' => array(
+		'tiff'    => array(
 			'image/tiff',
 		),
-		'tif' => array(
+		'tif'     => array(
 			'image/tiff',
 		),
-		'ico' => array(
+		'ico'     => array(
 			'application/ico',
 			'image/ico',
 			'image/icon',
@@ -2737,13 +2740,13 @@ function wp_get_file_types() {
 			'text/ico',
 		),
 		// Video formats.
-		'asf' => array(
+		'asf'     => array(
 			'application/vnd.ms-asf',
 			'video/x-ms-asf',
 			'video/x-ms-asf-plugin',
 			'video/x-ms-wm',
 		),
-		'asx' => array(
+		'asx'     => array(
 			'application/x-ms-asx',
 			'application/xml',
 			'audio/x-ms-asx',
@@ -2752,22 +2755,22 @@ function wp_get_file_types() {
 			'video/x-ms-wmx',
 			'video/x-ms-wvx',
 		),
-		'wmv' => array(
+		'wmv'     => array(
 			'application/vnd.ms-asf',
 			'video/x-ms-asf',
 			'video/x-ms-wmv',
 		),
-		'wmx' => array(
+		'wmx'     => array(
 			'application/x-ms-asx',
 			'audio/x-ms-asx',
 			'video/x-ms-wax',
 			'video/x-ms-wmx',
 			'video/x-ms-wvx',
 		),
-		'wm' => array(
+		'wm'      => array(
 			'video/x-ms-wm',
 		),
-		'avi' => array(
+		'avi'     => array(
 			'video/avi',
 			'video/divx',
 			'video/msvideo',
@@ -2775,7 +2778,7 @@ function wp_get_file_types() {
 			'video/x-avi',
 			'video/x-msvideo',
 		),
-		'divx' => array(
+		'divx'    => array(
 			'video/avi',
 			'video/divx',
 			'video/msvideo',
@@ -2783,67 +2786,67 @@ function wp_get_file_types() {
 			'video/x-avi',
 			'video/x-msvideo',
 		),
-		'flv' => array(
+		'flv'     => array(
 			'application/x-flash-video',
 			'flv-application/octet-stream',
 			'video/flv',
 			'video/x-flv',
 		),
-		'mov' => array(
+		'mov'     => array(
 			'application/quicktime',
 			'video/quicktime',
 		),
-		'qt' => array(
+		'qt'      => array(
 			'application/quicktime',
 			'video/quicktime',
 		),
-		'mpeg' => array(
+		'mpeg'    => array(
 			'video/mpeg',
 			'video/mpeg-system',
 			'video/x-mpeg',
 			'video/x-mpeg-system',
 			'video/x-mpeg2',
 		),
-		'mpg' => array(
+		'mpg'     => array(
 			'video/mpeg',
 			'video/mpeg-system',
 			'video/x-mpeg',
 			'video/x-mpeg-system',
 			'video/x-mpeg2',
 		),
-		'mpe' => array(
+		'mpe'     => array(
 			'video/mpeg',
 			'video/mpeg-system',
 			'video/x-mpeg',
 			'video/x-mpeg-system',
 			'video/x-mpeg2',
 		),
-		'mp4' => array(
+		'mp4'     => array(
 			'video/mp4',
 			'video/mp4v-es',
 			'video/quicktime',
 			'video/vnd.objectvideo',
 			'video/x-m4v',
 		),
-		'm4v' => array(
+		'm4v'     => array(
 			'video/mp4',
 			'video/mp4v-es',
 			'video/x-m4v',
 		),
-		'ogv' => array(
+		'ogv'     => array(
 			'application/ogg',
 			'video/ogg',
 			'video/x-ogg',
 		),
-		'webm' => array(
+		'webm'    => array(
 			'application/x-matroska',
 			'video/webm',
 		),
-		'mkv' => array(
+		'mkv'     => array(
 			'application/x-matroska',
 			'video/x-matroska',
 		),
-		'3gp' => array( // Can also be audio
+		'3gp'     => array( // Can also be audio
 			'audio/3gpp',
 			'audio/3gpp-encrypted',
 			'audio/x-rn-3gpp-amr',
@@ -2855,7 +2858,7 @@ function wp_get_file_types() {
 			'video/3gpp-encrypted',
 			'video/mp4',
 		),
-		'3gpp' => array( // Can also be audio
+		'3gpp'    => array( // Can also be audio
 			'audio/3gpp',
 			'audio/3gpp-encrypted',
 			'audio/x-rn-3gpp-amr',
@@ -2867,135 +2870,135 @@ function wp_get_file_types() {
 			'video/3gpp-encrypted',
 			'video/mp4',
 		),
-		'3g2' => array( // Can also be audio
+		'3g2'     => array( // Can also be audio
 			'audio/3gpp2',
 			'video/3gpp2',
 			'video/mp4',
 		),
-		'3gp2' => array( // Can also be audio
+		'3gp2'    => array( // Can also be audio
 			'audio/3gpp2',
 			'video/3gpp2',
 			'video/mp4',
 		),
 		// Text formats.
-		'txt' => array(
+		'txt'     => array(
 			'text/plain',
 			'text/prs.fallenstein.rst',
 			'text/prs.prop.logic',
 		),
-		'asc' => array(
+		'asc'     => array(
 			'application/pgp',
 			'application/pgp-encrypted',
 			'application/pgp-keys',
 			'application/pgp-signature',
 			'text/plain',
 		),
-		'c' => array(
+		'c'       => array(
 			'text/plain',
 			'text/x-c',
 		),
-		'cc' => array(
+		'cc'      => array(
 			'text/plain',
 			'text/x-c',
 			'text/x-c++src',
 			'text/x-csrc',
 		),
-		'h' => array(
+		'h'       => array(
 			'text/plain',
-			'text/x-c'
+			'text/x-c',
 		),
-		'srt' => array(
+		'srt'     => array(
 			'application/x-srt',
 			'application/x-subrip',
 			'text/plain',
 		),
-		'csv' => array(
+		'csv'     => array(
 			'text/csv',
 			'text/plain',
 			'text/x-comma-separated-values',
 			'text/x-csv',
 		),
-		'tsv' => array(
+		'tsv'     => array(
 			'text/tab-separated-values',
 			'text/plain',
 		),
-		'ics' => array(
+		'ics'     => array(
 			'application/ics',
 			'text/calendar',
 			'text/plain',
 			'text/x-vcalendar',
 		),
-		'rtx' => array(
+		'rtx'     => array(
 			'text/plain',
 			'text/richtext',
 		),
-		'css' => array(
+		'css'     => array(
 			'text/css',
 			'text/plain',
 		),
-		'htm' => array(
+		'htm'     => array(
 			'application/xhtml+xml',
 			'application/xml',
 			'text/html',
 			'text/plain',
 		),
-		'html' => array(
+		'html'    => array(
 			'application/vnd.dtg.local.html',
 			'application/xhtml+xml',
 			'application/xml',
 			'text/html',
 			'text/plain',
 		),
-		'vtt' => array(
+		'vtt'     => array(
 			'text/plain',
 			'text/vtt',
 		),
 		// Audio formats.
-		'mp3' => array(
+		'mp3'     => array(
 			'audio/mp3',
 			'audio/mpeg',
 			'audio/x-mp3',
 			'audio/x-mpeg',
 			'audio/x-mpg',
 		),
-		'm4a' => array(
+		'm4a'     => array(
 			'application/quicktime',
 			'audio/m4a',
 			'audio/mp4',
 			'audio/x-m4a',
 			'audio/x-mp4a',
 		),
-		'm4b' => array(
+		'm4b'     => array(
 			'application/quicktime',
 			'audio/mp4',
 			'audio/x-m4a',
 			'audio/x-m4b',
 			'audio/x-mp4a',
 		),
-		'aac' => array(
+		'aac'     => array(
 			'audio/aac',
 			'audio/x-aac',
 			'audio/x-hx-aac-adts',
 		),
-		'ra' => array(
+		'ra'      => array(
 			'audio/vnd.m-realaudio',
 			'audio/vnd.rn-realaudio',
 			'audio/x-pn-realaudio',
 			'audio/x-realaudio',
 		),
-		'ram' => array(
+		'ram'     => array(
 			'application/ram',
 			'audio/x-pn-realaudio',
 			'audio/x-realaudio',
 		),
-		'wav' => array(
+		'wav'     => array(
 			'audio/vnd.dts',
 			'audio/vnd.wave',
 			'audio/wav',
 			'audio/wave',
 			'audio/x-wav',
 		),
-		'ogg' => array( // Can also be video.
+		'ogg'     => array( // Can also be video.
 			'application/ogg',
 			'application/x-ogg',
 			'audio/ogg',
@@ -3011,7 +3014,7 @@ function wp_get_file_types() {
 			'video/x-theora',
 			'video/x-theora+ogg',
 		),
-		'oga' => array(
+		'oga'     => array(
 			'application/ogg',
 			'audio/ogg',
 			'audio/vorbis',
@@ -3022,26 +3025,26 @@ function wp_get_file_types() {
 			'audio/x-vorbis',
 			'audio/x-vorbis+ogg',
 		),
-		'flac' => array(
+		'flac'    => array(
 			'audio/flac',
 			'audio/x-flac',
 		),
-		'mid' => array(
+		'mid'     => array(
 			'audio/midi',
 			'audio/sp-midi',
 			'audio/x-midi',
 		),
-		'midi' => array(
+		'midi'    => array(
 			'audio/midi',
 			'audio/x-midi',
 		),
-		'wma' => array(
+		'wma'     => array(
 			'application/vnd.ms-asf',
 			'audio/wma',
 			'audio/x-ms-wma',
 			'video/x-ms-asf',
 		),
-		'wax' => array(
+		'wax'     => array(
 			'application/x-ms-asx',
 			'audio/x-ms-asx',
 			'audio/x-ms-wax',
@@ -3049,17 +3052,17 @@ function wp_get_file_types() {
 			'video/x-ms-wmx',
 			'video/x-ms-wvx',
 		),
-		'mka' => array(
+		'mka'     => array(
 			'application/x-matroska',
 			'audio/x-matroska',
 		),
 		// Misc application formats.
-		'rtf' => array(
+		'rtf'     => array(
 			'application/rtf',
 			'text/plain',
 			'text/rtf',
 		),
-		'js' => array(
+		'js'      => array(
 			'application/ecmascript',
 			'application/javascript',
 			'application/node',
@@ -3067,19 +3070,19 @@ function wp_get_file_types() {
 			'text/javascript',
 			'text/plain',
 		),
-		'pdf' => array(
+		'pdf'     => array(
 			'application/acrobat',
 			'application/nappdf',
 			'application/pdf',
 			'application/x-pdf',
 			'image/pdf',
 		),
-		'swf' => array(
+		'swf'     => array(
 			'application/futuresplash',
 			'application/vnd.adobe.flash.movie',
 			'application/x-shockwave-flash',
 		),
-		'class' => array(
+		'class'   => array(
 			'application/java',
 			'application/java-byte-code',
 			'application/java-vm',
@@ -3088,18 +3091,18 @@ function wp_get_file_types() {
 			'application/x-java-class',
 			'application/x-java-vm',
 		),
-		'tar' => array(
+		'tar'     => array(
 			'application/x-gtar',
 			'application/x-tar',
 		),
-		'zip' => array(
+		'zip'     => array(
 			'application/vnd.easykaraoke.cdgdownload',
 			'application/vnd.gov.sk.e-form+zip',
 			'application/x-zip',
 			'application/x-zip-compressed',
 			'application/zip',
 		),
-		'gz' => array(
+		'gz'      => array(
 			'application/gzip',
 			'application/gzip-compressed',
 			'application/gzipped',
@@ -3108,7 +3111,7 @@ function wp_get_file_types() {
 			'application/x-gzip-compressed',
 			'gzip/document',
 		),
-		'gzip' => array(
+		'gzip'    => array(
 			'application/gzip',
 			'application/gzip-compressed',
 			'application/gzipped',
@@ -3117,21 +3120,21 @@ function wp_get_file_types() {
 			'application/x-gzip-compressed',
 			'gzip/document',
 		),
-		'rar' => array(
+		'rar'     => array(
 			'application/vnd.rar',
 			'application/x-rar',
 			'application/x-rar-compressed',
 		),
-		'7z' => array(
+		'7z'      => array(
 			'application/x-7z-compressed',
 		),
-		'exe' => array(
+		'exe'     => array(
 			'application/octet-stream',
 			'application/x-dosexec',
 			'application/x-ms-dos-executable',
 			'application/x-msdownload',
 		),
-		'psd' => array(
+		'psd'     => array(
 			'application/photoshop',
 			'application/x-photoshop',
 			'image/photoshop',
@@ -3140,12 +3143,12 @@ function wp_get_file_types() {
 			'image/x-photoshop',
 			'image/x-psd',
 		),
-		'xcf' => array(
+		'xcf'     => array(
 			'image/x-xcf',
 			'image/xcf',
 		),
 		// MS Office formats.
-		'doc' => array(
+		'doc'     => array(
 			'application/msword',
 			'application/vnd.ms-office',
 			'application/vnd.ms-word',
@@ -3154,7 +3157,7 @@ function wp_get_file_types() {
 			'application/xml',
 			'zz-application/zz-winassoc-doc',
 		),
-		'pot' => array(
+		'pot'     => array(
 			'application/mspowerpoint',
 			'application/powerpoint',
 			'application/vnd.ms-office',
@@ -3164,25 +3167,25 @@ function wp_get_file_types() {
 			'text/x-gettext-translation-template',
 			'text/x-pot',
 		),
-		'pps' => array(
+		'pps'     => array(
 			'application/mspowerpoint',
 			'application/powerpoint',
 			'application/vnd.ms-office',
 			'application/vnd.ms-powerpoint',
 			'application/x-mspowerpoint',
 		),
-		'ppt' => array(
+		'ppt'     => array(
 			'application/mspowerpoint',
 			'application/powerpoint',
 			'application/vnd.ms-office',
 			'application/vnd.ms-powerpoint',
 			'application/x-mspowerpoint',
 		),
-		'wri' => array(
+		'wri'     => array(
 			'application/vnd.ms-write',
 			'application/x-mswrite',
 		),
-		'xla' => array(
+		'xla'     => array(
 			'application/msexcel',
 			'application/vnd.ms-excel',
 			'application/vnd.ms-office',
@@ -3190,7 +3193,7 @@ function wp_get_file_types() {
 			'application/xml',
 			'zz-application/zz-winassoc-xls',
 		),
-		'xls' => array(
+		'xls'     => array(
 			'application/msexcel',
 			'application/vnd.ms-excel',
 			'application/vnd.ms-office',
@@ -3198,7 +3201,7 @@ function wp_get_file_types() {
 			'application/xml',
 			'zz-application/zz-winassoc-xls',
 		),
-		'xlt' => array(
+		'xlt'     => array(
 			'application/msexcel',
 			'application/vnd.ms-excel',
 			'application/vnd.ms-office',
@@ -3206,7 +3209,7 @@ function wp_get_file_types() {
 			'application/xml',
 			'zz-application/zz-winassoc-xls',
 		),
-		'xlw' => array(
+		'xlw'     => array(
 			'application/msexcel',
 			'application/vnd.ms-excel',
 			'application/vnd.ms-office',
@@ -3214,7 +3217,7 @@ function wp_get_file_types() {
 			'application/xml',
 			'zz-application/zz-winassoc-xls',
 		),
-		'mdb' => array(
+		'mdb'     => array(
 			'application/mdb',
 			'application/msaccess',
 			'application/vnd.ms-access',
@@ -3223,112 +3226,112 @@ function wp_get_file_types() {
 			'application/x-msaccess',
 			'zz-application/zz-winassoc-mdb',
 		),
-		'mpp' => array(
+		'mpp'     => array(
 			'application/vnd.ms-project',
 			'audio/x-musepack',
 		),
-		'docx' => array(
+		'docx'    => array(
 			'application/vnd.ms-office',
 			'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 			'application/zip',
 		),
-		'docm' => array(
+		'docm'    => array(
 			'application/vnd.ms-office',
 			'application/vnd.ms-word.document.macroenabled.12',
 			'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 			'application/xml',
 		),
-		'dotx' => array(
+		'dotx'    => array(
 			'application/vnd.ms-office',
 			'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
 			'application/zip',
 		),
-		'dotm' => array(
+		'dotm'    => array(
 			'application/vnd.ms-office',
 			'application/vnd.ms-word.template.macroenabled.12',
 			'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
 			'application/xml',
 		),
-		'xlsx' => array(
+		'xlsx'    => array(
 			'application/vnd.ms-office',
 			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 			'application/zip',
 		),
-		'xlsm' => array(
+		'xlsm'    => array(
 			'application/vnd.ms-excel.sheet.macroenabled.12',
 			'application/vnd.ms-office',
 			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 			'application/zip',
 		),
-		'xlsb' => array(
+		'xlsb'    => array(
 			'application/vnd.ms-excel.sheet.binary.macroenabled.12',
 			'application/vnd.ms-office',
 			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 			'application/xml',
 		),
-		'xltx' => array(
+		'xltx'    => array(
 			'application/vnd.ms-office',
 			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 			'application/vnd.openxmlformats-officedocument.spreadsheetml.template',
 			'application/zip',
 		),
-		'xltm' => array(
+		'xltm'    => array(
 			'application/vnd.ms-excel.template.macroenabled.12',
 			'application/vnd.ms-office',
 			'application/vnd.openxmlformats-officedocument.spreadsheetml.template',
 			'application/xml',
 		),
-		'xlam' => array(
+		'xlam'    => array(
 			'application/vnd.ms-excel.addin.macroenabled.12',
 			'application/vnd.ms-office',
 			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 			'application/xml',
 		),
-		'pptx' => array(
+		'pptx'    => array(
 			'application/vnd.ms-office',
 			'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 			'application/zip',
 		),
-		'pptm' => array(
+		'pptm'    => array(
 			'application/vnd.ms-office',
 			'application/vnd.ms-powerpoint.presentation.macroenabled.12',
 			'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 		),
-		'ppsx' => array(
+		'ppsx'    => array(
 			'application/vnd.ms-office',
 			'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
 			'application/zip',
 		),
-		'ppsm' => array(
+		'ppsm'    => array(
 			'application/vnd.ms-office',
 			'application/vnd.ms-powerpoint.slideshow.macroenabled.12',
 			'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
 		),
-		'potx' => array(
+		'potx'    => array(
 			'application/vnd.ms-office',
 			'application/vnd.openxmlformats-officedocument.presentationml.template',
 			'application/zip',
 		),
-		'potm' => array(
+		'potm'    => array(
 			'application/vnd.ms-office',
 			'application/vnd.ms-powerpoint.template.macroenabled.12',
 			'application/vnd.openxmlformats-officedocument.presentationml.template',
 		),
-		'ppam' => array(
+		'ppam'    => array(
 			'application/vnd.ms-office',
 			'application/vnd.ms-powerpoint.addin.macroenabled.12',
 		),
-		'sldx' => array(
+		'sldx'    => array(
 			'application/vnd.ms-office',
 			'application/vnd.openxmlformats-officedocument.presentationml.slide',
 			'application/zip',
 		),
-		'sldm' => array(
+		'sldm'    => array(
 			'application/vnd.ms-office',
 			'application/vnd.ms-powerpoint.slide.macroenabled.12',
 			'application/vnd.openxmlformats-officedocument.presentationml.slide',
 		),
-		'onetoc' => array(
+		'onetoc'  => array(
 			'application/onenote',
 			'application/onenoteformatonetoc2',
 		),
@@ -3336,77 +3339,77 @@ function wp_get_file_types() {
 			'application/onenote',
 			'application/onenoteformatonetoc2',
 		),
-		'onetmp' => array(
+		'onetmp'  => array(
 			'application/msonenote',
 			'application/onenote',
 		),
-		'onepkg' => array(
+		'onepkg'  => array(
 			'application/onenote',
 			'application/onenoteformatpackage',
 			'application/vnd.ms-cab-compressed',
 		),
-		'oxps' => array(
+		'oxps'    => array(
 			'application/oxps',
 			'application/vnd.ms-xpsdocument',
 			'application/xps',
 			'application/zip',
 		),
-		'xps' => array(
+		'xps'     => array(
 			'application/oxps',
 			'application/vnd.ms-xpsdocument',
 			'application/xps',
 			'application/zip',
 		),
 		// OpenOffice formats.
-		'odt' => array(
+		'odt'     => array(
 			'application/vnd.oasis.opendocument.text',
 			'application/x-vnd.oasis.opendocument.text',
 			'application/zip',
 		),
-		'odp' => array(
+		'odp'     => array(
 			'application/vnd.oasis.opendocument.presentation',
 			'application/x-vnd.oasis.opendocument.presentation',
 			'application/zip',
 		),
-		'ods' => array(
+		'ods'     => array(
 			'application/vnd.oasis.opendocument.spreadsheet',
 			'application/x-vnd.oasis.opendocument.spreadsheet',
 			'application/zip',
 		),
-		'odg' => array(
+		'odg'     => array(
 			'application/vnd.oasis.opendocument.graphics',
 			'application/x-vnd.oasis.opendocument.graphics',
 			'application/zip',
 		),
-		'odc' => array(
+		'odc'     => array(
 			'application/vnd.oasis.opendocument.chart',
 			'application/x-vnd.oasis.opendocument.chart',
 			'application/zip',
 		),
-		'odb' => array(
+		'odb'     => array(
 			'application/vnd.oasis.opendocument.base',
 			'application/vnd.oasis.opendocument.database',
 			'application/vnd.sun.xml.base',
 			'application/zip',
 		),
-		'odf' => array(
+		'odf'     => array(
 			'application/vnd.oasis.opendocument.formula',
 			'application/x-vnd.oasis.opendocument.formula',
 			'application/zip',
 		),
 		// WordPerfect formats.
-		'wp' => array(
+		'wp'      => array(
 			'application/vnd.wordperfect',
 			'application/wordperfect',
 			'application/x-wordperfect',
 		),
-		'wpd' => array(
+		'wpd'     => array(
 			'application/vnd.wordperfect',
 			'application/wordperfect',
 			'application/x-wordperfect',
 		),
 		// iWork formats.
-		'key' => array(
+		'key'     => array(
 			'application/vnd.apple.iwork',
 			'application/vnd.apple.keynote',
 			'application/x-iwork-keynote-sffkey',
@@ -3416,7 +3419,7 @@ function wp_get_file_types() {
 			'application/vnd.apple.iwork',
 			'application/vnd.apple.numbers',
 		),
-		'pages' => array(
+		'pages'   => array(
 			'application/vnd.apple.iwork',
 			'application/vnd.apple.pages',
 		),
@@ -3445,17 +3448,16 @@ function wp_get_file_types() {
 		$extra_mimes = apply_filters( 'upload_mimes', $extra_mimes, null );
 	}
 
-
 	/*
 	 * Loop through any extra mimes added via filters and convert them
 	 * to the new multidimentional array format.
 	 */
-	foreach( $extra_mimes as $ext_preg => $mime_val ) {
+	foreach ( $extra_mimes as $ext_preg => $mime_val ) {
 		// Convert any regex patterns to an array of extensions.
 		$extensions = explode( '|', $ext_preg );
 
 		// Add extra mimes to the extension, whether it exists or not.
-		foreach( $extensions as $ext ) {
+		foreach ( $extensions as $ext ) {
 			$mime_map[ $ext ][] = $mime_val;
 		}
 	}
