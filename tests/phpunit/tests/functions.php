@@ -1153,14 +1153,14 @@ class Tests_Functions extends WP_UnitTestCase {
 		}
 
 		$wp_check_file = wp_check_filetype_and_ext( $file, $filename );
-		$types = wp_get_file_types();
+		$types         = wp_get_file_types();
 
 		// Check that the extension and proper_filename are what we expect.
 		$this->assertEquals( $expected['ext'], $wp_check_file['ext'], 'Extension does not match.' );
 		$this->assertEquals( $expected['proper_filename'], $wp_check_file['proper_filename'], 'File not named correctly.' );
 
 		// Test that the actual file type is in the list of expected file types for that extension.
-		$this->assertTrue( in_array( $wp_check_file['type'], $types[ $expected['ext' ] ], true ), 'This filetype is not allowed.' );
+		$this->assertTrue( in_array( $wp_check_file['type'], $types[ $expected['ext'] ], true ), 'This filetype is not allowed.' );
 	}
 
 	public function _wp_check_filetype_and_ext_data_allowed() {
@@ -1190,8 +1190,8 @@ class Tests_Functions extends WP_UnitTestCase {
 				DIR_TESTDATA . '/uploads/test.vtt',
 				'test.vtt',
 				array(
-					'ext' => 'vtt',
-					'type' => 'text/vtt',
+					'ext'             => 'vtt',
+					'type'            => 'text/vtt',
 					'proper_filename' => false,
 				),
 			),
@@ -1199,8 +1199,8 @@ class Tests_Functions extends WP_UnitTestCase {
 				DIR_TESTDATA . '/uploads/test.csv',
 				'test.csv',
 				array(
-					'ext' => 'csv',
-					'type' => 'text/csv',
+					'ext'             => 'csv',
+					'type'            => 'text/csv',
 					'proper_filename' => false,
 				),
 			),
