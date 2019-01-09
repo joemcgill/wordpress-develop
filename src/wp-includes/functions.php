@@ -2950,10 +2950,6 @@ function wp_get_file_types() {
 			'text/plain',
 			'text/vtt',
 		),
-		'dfxp' => array(
-			'application/ttaf+xml',
-			'text/dfxp',
-		),
 		// Audio formats.
 		'mp3' => array(
 			'audio/mp3',
