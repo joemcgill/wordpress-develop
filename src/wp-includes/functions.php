@@ -2488,7 +2488,7 @@ function wp_check_filetype( $filename, $mimes = null ) {
  * @param string $file     Full path to the file.
  * @param string $filename The name of the file (may differ from $file due to $file being
  *                         in a tmp directory).
- * @param array   $mimes   Optional. Key is the file extension with value as the mime type.
+ * @param array  $mimes    Optional. Key is the file extension with value as the mime type.
  * @return array Values for the extension, MIME, and either a corrected filename or false
  *               if original $filename is valid.
  */
