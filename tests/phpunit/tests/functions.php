@@ -1145,14 +1145,211 @@ class Tests_Functions extends WP_UnitTestCase {
 
 	/**
 	 * @ticket 39550
-	 * @dataProvider _wp_check_filetype_and_ext_data
+	 * @dataProvider _wp_check_filetype_and_ext_data_allowed
 	 */
-	function test_wp_check_filetype_and_ext( $file, $filename, $expected ) {
+	function test_wp_check_filetype_and_ext_allowed( $file, $filename, $expected ) {
 		if ( ! extension_loaded( 'fileinfo' ) ) {
 			$this->markTestSkipped( 'The fileinfo PHP extension is not loaded.' );
 		}
 
+		$wp_check_file = wp_check_filetype_and_ext( $file, $filename );
+		$types = wp_get_file_types();
+
+		// Check that the extension and proper_filename are what we expect.
+		$this->assertEquals( $expected['ext'], $wp_check_file['ext'], 'Extension does not match.' );
+		$this->assertEquals( $expected['proper_filename'], $wp_check_file['proper_filename'], 'File not named correctly.' );
+
+		// Test that the actual file type is in the list of expected file types for that extension.
+		$this->assertTrue( in_array( $wp_check_file['type'], $types[ $expected['ext' ] ], true ), 'This filetype is not allowed.' );
+	}
+
+	public function _wp_check_filetype_and_ext_data_allowed() {
+		$data = array(
+			// Standard image.
+			array(
+				DIR_TESTDATA . '/images/canola.jpg',
+				'canola.jpg',
+				array(
+					'ext'             => 'jpg',
+					'type'            => 'image/jpeg',
+					'proper_filename' => false,
+				),
+			),
+			// Image with wrong extension.
+			array(
+				DIR_TESTDATA . '/images/test-image-mime-jpg.png',
+				'test-image-mime-jpg.png',
+				array(
+					'ext'             => 'jpg',
+					'type'            => 'image/jpeg',
+					'proper_filename' => 'test-image-mime-jpg.jpg',
+				),
+			),
+			// Assorted text/* sample files
+			array(
+				DIR_TESTDATA . '/uploads/test.vtt',
+				'test.vtt',
+				array(
+					'ext' => 'vtt',
+					'type' => 'text/vtt',
+					'proper_filename' => false,
+				),
+			),
+			array(
+				DIR_TESTDATA . '/uploads/test.csv',
+				'test.csv',
+				array(
+					'ext' => 'csv',
+					'type' => 'text/csv',
+					'proper_filename' => false,
+				),
+			),
+		);
+
+		// Test a few additional file types on single sites.
+		if ( ! is_multisite() ) {
+			$data = array_merge(
+				$data,
+				array(
+					// Standard non-image file.
+					 array(
+						 DIR_TESTDATA . '/formatting/big5.txt',
+						 'big5.txt',
+						 array(
+							 'ext'             => 'txt',
+							 'type'            => 'text/plain',
+							 'proper_filename' => false,
+						 ),
+					 ),
+					// Non-image file with wrong sub-type.
+					array(
+						DIR_TESTDATA . '/uploads/pages-to-word.docx',
+						'pages-to-word.docx',
+						array(
+							'ext'             => 'docx',
+							'type'            => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+							'proper_filename' => false,
+						),
+					),
+					// FLAC file.
+					array(
+						DIR_TESTDATA . '/uploads/small-audio.flac',
+						'small-audio.flac',
+						array(
+							'ext'             => 'flac',
+							'type'            => 'audio/flac',
+							'proper_filename' => false,
+						),
+					),
+					// Assorted text/* sample files
+					array(
+						DIR_TESTDATA . '/uploads/test.vtt',
+						'test.vtt',
+						array(
+							'ext'             => 'vtt',
+							'type'            => 'text/vtt',
+							'proper_filename' => false,
+						),
+					),
+					array(
+						DIR_TESTDATA . '/uploads/test.csv',
+						'test.csv',
+						array(
+							'ext'             => 'csv',
+							'type'            => 'text/csv',
+							'proper_filename' => false,
+						),
+					),
+					// RTF files.
+					array(
+						DIR_TESTDATA . '/uploads/test.rtf',
+						'test.rtf',
+						array(
+							'ext'             => 'rtf',
+							'type'            => 'application/rtf',
+							'proper_filename' => false,
+						),
+					),
+				)
+			);
+		}
+
+		return $data;
+	}
+
+	/**
+	 * @ticket 39550
+	 * @dataProvider _wp_check_filetype_and_ext_data_unallowed
+	 */
+	function test_wp_check_filetype_and_ext_unallowed( $file, $filename ) {
+		if ( ! extension_loaded( 'fileinfo' ) ) {
+			$this->markTestSkipped( 'The fileinfo PHP extension is not loaded.' );
+		}
+
+		$expected = array(
+			'ext'             => false,
+			'type'            => false,
+			'proper_filename' => false,
+		);
+
 		$this->assertEquals( $expected, wp_check_filetype_and_ext( $file, $filename ) );
+	}
+
+	public function _wp_check_filetype_and_ext_data_unallowed() {
+		$data = array(
+			// Image without extension.
+			array(
+				DIR_TESTDATA . '/images/test-image-no-extension',
+				'test-image-no-extension',
+			),
+			// Valid non-image file with an image extension.
+			array(
+				DIR_TESTDATA . '/formatting/big5.txt',
+				'big5.jpg',
+			),
+			// DFXP files removed in WordPress 5.1.0
+			array(
+				DIR_TESTDATA . '/uploads/test.dfxp',
+				'test.dfxp',
+			),
+			// Non-image file not allowed.
+			array(
+				DIR_TESTDATA . '/export/crazy-cdata.xml',
+				'crazy-cdata.xml',
+			),
+			// Non-image file not allowed even if it's named like one.
+			array(
+				DIR_TESTDATA . '/export/crazy-cdata.xml',
+				'crazy-cdata.jpg',
+			),
+			// Non-image file not allowed if it's named like something else.
+			array(
+				DIR_TESTDATA . '/export/crazy-cdata.xml',
+				'crazy-cdata.doc',
+			),
+			// Non-image file not allowed even if it's named like one.
+			array(
+				DIR_TESTDATA . '/export/crazy-cdata.xml',
+				'crazy-cdata.jpg',
+			),
+			// Non-image file not allowed if it's named like something else.
+			array(
+				DIR_TESTDATA . '/export/crazy-cdata.xml',
+				'crazy-cdata.doc',
+			),
+			// Non-image file not allowed even if it's named like one.
+			array(
+				DIR_TESTDATA . '/export/crazy-cdata.xml',
+				'crazy-cdata.jpg',
+			),
+			// Non-image file not allowed if it's named like something else.
+			array(
+				DIR_TESTDATA . '/export/crazy-cdata.xml',
+				'crazy-cdata.doc',
+			),
+		);
+
+		return $data;
 	}
 
 	/**
@@ -1246,219 +1443,6 @@ class Tests_Functions extends WP_UnitTestCase {
 				false,
 			),
 		);
-
-		return $data;
-	}
-
-	public function _wp_check_filetype_and_ext_data() {
-		$data = array(
-			// Standard image.
-			array(
-				DIR_TESTDATA . '/images/canola.jpg',
-				'canola.jpg',
-				array(
-					'ext'             => 'jpg',
-					'type'            => 'image/jpeg',
-					'proper_filename' => false,
-				),
-			),
-			// Image with wrong extension.
-			array(
-				DIR_TESTDATA . '/images/test-image-mime-jpg.png',
-				'test-image-mime-jpg.png',
-				array(
-					'ext'             => 'jpg',
-					'type'            => 'image/jpeg',
-					'proper_filename' => 'test-image-mime-jpg.jpg',
-				),
-			),
-			// Image without extension.
-			array(
-				DIR_TESTDATA . '/images/test-image-no-extension',
-				'test-image-no-extension',
-				array(
-					'ext'             => false,
-					'type'            => false,
-					'proper_filename' => false,
-				),
-			),
-			// Valid non-image file with an image extension.
-			array(
-				DIR_TESTDATA . '/formatting/big5.txt',
-				'big5.jpg',
-				array(
-					'ext'             => false,
-					'type'            => false,
-					'proper_filename' => false,
-				),
-			),
-			// Non-image file not allowed.
-			array(
-				DIR_TESTDATA . '/export/crazy-cdata.xml',
-				'crazy-cdata.xml',
-				array(
-					'ext'             => false,
-					'type'            => false,
-					'proper_filename' => false,
-				),
-			),
-			// Non-image file not allowed even if it's named like one.
-			array(
-				DIR_TESTDATA . '/export/crazy-cdata.xml',
-				'crazy-cdata.jpg',
-				array(
-					'ext'             => false,
-					'type'            => false,
-					'proper_filename' => false,
-				),
-			),
-			// Non-image file not allowed if it's named like something else.
-			array(
-				DIR_TESTDATA . '/export/crazy-cdata.xml',
-				'crazy-cdata.doc',
-				array(
-					'ext'             => false,
-					'type'            => false,
-					'proper_filename' => false,
-				),
-			),
-			// Non-image file not allowed even if it's named like one.
-			array(
-				DIR_TESTDATA . '/export/crazy-cdata.xml',
-				'crazy-cdata.jpg',
-				array(
-					'ext'             => false,
-					'type'            => false,
-					'proper_filename' => false,
-				),
-			),
-			// Non-image file not allowed if it's named like something else.
-			array(
-				DIR_TESTDATA . '/export/crazy-cdata.xml',
-				'crazy-cdata.doc',
-				array(
-					'ext'             => false,
-					'type'            => false,
-					'proper_filename' => false,
-				),
-			),
-			// Non-image file not allowed even if it's named like one.
-			array(
-				DIR_TESTDATA . '/export/crazy-cdata.xml',
-				'crazy-cdata.jpg',
-				array(
-					'ext' => false,
-					'type' => false,
-					'proper_filename' => false,
-				),
-			),
-			// Non-image file not allowed if it's named like something else.
-			array(
-				DIR_TESTDATA . '/export/crazy-cdata.xml',
-				'crazy-cdata.doc',
-				array(
-					'ext' => false,
-					'type' => false,
-					'proper_filename' => false,
-				),
-			),
-			// Assorted text/* sample files
-			array(
-				DIR_TESTDATA . '/uploads/test.vtt',
-				'test.vtt',
-				array(
-					'ext' => 'vtt',
-					'type' => 'text/vtt',
-					'proper_filename' => false,
-				),
-			),
-			array(
-				DIR_TESTDATA . '/uploads/test.dfxp',
-				'test.dfxp',
-				array(
-					'ext' => 'dfxp',
-					'type' => 'text/dfxp',
-					'proper_filename' => false,
-				),
-			),
-			array(
-				DIR_TESTDATA . '/uploads/test.csv',
-				'test.csv',
-				array(
-					'ext' => 'csv',
-					'type' => 'text/csv',
-					'proper_filename' => false,
-				),
-			),
-		);
-
-		// Test a few additional file types on single sites.
-		if ( ! is_multisite() ) {
-			$data = array_merge(
-				$data,
-				array(
-					// Standard non-image file.
-					 array(
-						 DIR_TESTDATA . '/formatting/big5.txt',
-						 'big5.txt',
-						 array(
-							 'ext'             => 'txt',
-							 'type'            => 'text/plain',
-							 'proper_filename' => false,
-						 ),
-					 ),
-					// Non-image file with wrong sub-type.
-					array(
-						DIR_TESTDATA . '/uploads/pages-to-word.docx',
-						'pages-to-word.docx',
-						array(
-							'ext'             => 'docx',
-							'type'            => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-							'proper_filename' => false,
-						),
-					),
-					// FLAC file.
-					array(
-						DIR_TESTDATA . '/uploads/small-audio.flac',
-						'small-audio.flac',
-						array(
-							'ext'             => 'flac',
-							'type'            => 'audio/flac',
-							'proper_filename' => false,
-						),
-					),
-					// Assorted text/* sample files
-					array(
-						DIR_TESTDATA . '/uploads/test.vtt',
-						'test.vtt',
-						array(
-							'ext'             => 'vtt',
-							'type'            => 'text/vtt',
-							'proper_filename' => false,
-						),
-					),
-					array(
-						DIR_TESTDATA . '/uploads/test.csv',
-						'test.csv',
-						array(
-							'ext'             => 'csv',
-							'type'            => 'text/csv',
-							'proper_filename' => false,
-						),
-					),
-					// RTF files.
-					array(
-						DIR_TESTDATA . '/uploads/test.rtf',
-						'test.rtf',
-						array(
-							'ext'             => 'rtf',
-							'type'            => 'application/rtf',
-							'proper_filename' => false,
-						),
-					),
-				)
-			);
-		}
 
 		return $data;
 	}
