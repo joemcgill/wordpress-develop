@@ -2587,23 +2587,14 @@ function wp_get_real_file_mime( $file ) {
  *
  * @since X.X.X
  *
- * @return bool Whether the pair is safe to upload.
+ * @param string $ext  A file type extension.
+ * @param string $type A mime type string.
+ * @return bool Whether the extension and mime type pair is allowed.
  */
 function wp_is_file_type_allowed( $ext, $type ) {
-	// fileinfo often misidentifies obscure files as one of these types
-	$nonspecific_types = array(
-		'application/octet-stream',
-		'application/encrypted',
-		'application/zip',
-	);
+	$allowed_types = wp_get_allowed_file_types();
 
-	if ( in_array( $type, $nonspecific_types, true ) ) {
-		return false;
-	}
-
-	$allowed = wp_get_allowed_file_types();
-
-	return ( isset( $allowed[ $ext ] ) && in_array( $type, $allowed[ $ext ] ) );
+	return ( isset( $allowed_types[ $ext ] ) && in_array( $type, $allowed_types[ $ext ] ) );
 }
 
 /**
