@@ -3503,7 +3503,7 @@ function wp_get_file_types() {
 	 * @param array $mime_map File extensions and their corresponding mime types.
 	 *
 	 */
-	return apply_filters( 'wp_mimes', $mime_map );
+	return apply_filters( 'wp_file_types', $mime_map );
 }
 
 /**
