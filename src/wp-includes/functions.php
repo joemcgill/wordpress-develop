@@ -3160,7 +3160,6 @@ function wp_get_file_types() {
 			'application/x-7z-compressed',
 		),
 		'exe'     => array(
-			'application/octet-stream',
 			'application/x-dosexec',
 			'application/x-ms-dos-executable',
 			'application/x-msdownload',
