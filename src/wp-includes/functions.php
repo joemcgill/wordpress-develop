@@ -2506,7 +2506,7 @@ function wp_check_filetype_and_ext( $file, $filename, $mimes = null ) {
 	}
 
 	// Get the real mime type of the file.
-	$type = wp_get_real_file_mime( $file );
+	$type = wp_get_mime_type( $file );
 
 	// Maybe update the filename based on the mime type.
 	$proper_filename = false;
@@ -2540,45 +2540,6 @@ function wp_check_filetype_and_ext( $file, $filename, $mimes = null ) {
 	 */
 	return apply_filters( 'wp_check_filetype_and_ext', compact( 'ext', 'type', 'proper_filename' ), $file, $filename, $mimes, $real_mime );
 }
-
-/**
- * Return the mime type of a file.
- *
- * @since X.X.X
- *
- * @param string $file Full path to the file to be checked.
- * @return string The mime type value. Note that 'application/octet-stream' is a generic file.
- */
-function wp_get_real_file_mime( $file ) {
-	$real_type = false;
-
-	// Determine the filetype
-	$ext  = pathinfo( $file, PATHINFO_EXTENSION );
-	$type = wp_ext2type( $ext );
-
-	// First try to get the mime of images in a performant way.
-	if ( 'image' === $type ) {
-		$real_type = wp_get_image_mime( $file );
-	}
-
-	// Try to validate the file if we don't have a real mime already.
-	if (
-		( ! $real_type || $real_type === 'application/octet-stream' )
-		&& extension_loaded( 'fileinfo' )
-	) {
-		$finfo     = finfo_open( FILEINFO_MIME_TYPE );
-		$real_type = finfo_file( $finfo, $file );
-		finfo_close( $finfo );
-	}
-
-	// An 'application/octet-stream' value means the mime type could not be determined.
-	if ( ! $real_type ) {
-		$real_type = 'application/octet-stream';
-	}
-
-	return $real_type;
-}
-
 
 /**
  * Determine if this extension and mime pair are safe.
@@ -2647,6 +2608,46 @@ function wp_maybe_rename_file( $filename, $type ) {
 }
 
 /**
+ * Return the mime type of a file.
+ *
+ * @since X.X.X
+ *
+ * @param string $file Full path to the file to be checked.
+ * @return string The mime type value. Note that 'application/octet-stream' is a generic file.
+ */
+function wp_get_mime_type( $file ) {
+	$mime_guessers = array(
+		'wp_get_image_mime',
+		'wp_get_file_mime',
+	);
+
+	/**
+	 * Filters the list of mime guesser callbacks.
+	 *
+	 * Mime guessers are called in priority order, returning the first mime type found.
+	 * When adding a guesser callback, an unknown mime type should be returned as false.
+	 *
+	 * @since X.X.X
+	 *
+	 * @param array  $mime_guessers List of supported mime guessing callback functions.
+	 * @param string $file          Full path to the file.
+	 */
+	apply_filters( 'wp_mime_guessers', $mime_guessers, $file );
+
+	foreach ( $mime_guessers as $guesser ) {
+		$mime_type = call_user_func( $guesser, $file );
+
+		// Return as soon as we've found a mime type.
+		if ( $mime_type ) {
+			return $mime_type;
+		}
+	}
+
+	// If no mime type was determined, return application/octet-stream.
+	return 'application/octet-stream';
+}
+
+/**
  * Returns the real mime type of an image file.
  *
  * This depends on exif_imagetype() or getimagesize() to determine real mime types.
@@ -2657,6 +2658,15 @@ function wp_maybe_rename_file( $filename, $type ) {
  * @return string|false The actual mime type or false if the type cannot be determined.
  */
 function wp_get_image_mime( $file ) {
+	// Determine the filetype
+	$ext  = pathinfo( $file, PATHINFO_EXTENSION );
+	$type = wp_ext2type( $ext );
+
+	// Bail early if this isn't a supported image file.
+	if ( 'image' !== $type ) {
+		return false;
+	}
+
 	/*
 	 * Use exif_imagetype() to check the mimetype if available or fall back to
 	 * getimagesize() if exif isn't avaialbe. If either function throws an Exception
@@ -2670,13 +2680,43 @@ function wp_get_image_mime( $file ) {
 			$imagesize = getimagesize( $file );
 			$mime      = ( isset( $imagesize['mime'] ) ) ? $imagesize['mime'] : false;
 		} else {
+			// Mime can't be determined.
 			$mime = false;
 		}
 	} catch ( Exception $e ) {
 		$mime = false;
 	}
 
-	return $mime;
+	// An application/octet-stream value means the value wasn't determined.
+	return ( 'application/octet-stream' === $mime ) ? false : $mime;
+}
+
+/**
+ * Returns the real mime type of a file.
+ *
+ * This depends on finfo_file() to determine real mime types.
+ *
+ * @since X.X.X
+ *
+ * @param string $file Full path to the file.
+ * @return string|false The actual mime type or false if the type cannot be determined.
+ */
+function wp_get_file_mime( $file ) {
+	// Try to validate the file if we don't have a real mime already.
+	if ( ! extension_loaded( 'fileinfo' ) ) {
+		return false;
+	}
+
+	try {
+		$finfo     = finfo_open( FILEINFO_MIME_TYPE );
+		$mime_type = finfo_file( $finfo, $file );
+		finfo_close( $finfo );
+	} catch ( Exception $e ) {
+		$mime_type = false;
+	}
+
+	// An application/octet-stream value means the value wasn't determined.
+	return ( 'application/octet-stream' === $mime_type ) ? false : $mime_type;
 }
 
 /**
