@@ -2493,26 +2493,23 @@ function wp_check_filetype( $filename, $mimes = null ) {
  *               if original $filename is valid.
  */
 function wp_check_filetype_and_ext( $file, $filename, $mimes = null ) {
-	// Get the extension and assumed mime type from the filename.
-	$wp_filetype = wp_check_filetype( $filename, $mimes );
-	$ext         = $wp_filetype['ext'];
-	$unsafe_type = $wp_filetype['type'];
-
-	// We can't do any further validation without a file to work with.
+	/*
+	 * We can't do any further validation without a file to work with.
+	 * In the future, consider deprecating and returning a WP_Error instead.
+	 */
 	if ( ! file_exists( $file ) ) {
-		$type            = $unsafe_type;
+		$wp_filetype     = wp_check_filetype( $filename, $mimes );
+		$ext             = $wp_filetype['ext'];
+		$type            = $wp_filetype['type'];
 		$proper_filename = false;
 		return compact( 'ext', 'type', 'proper_filename' );
 	}
 
-	// Get the real mime type of the file.
+	$ext  = pathinfo( $filename, PATHINFO_EXTENSION );
 	$type = wp_get_mime_type( $file );
 
-	// Maybe update the filename based on the mime type.
-	$proper_filename = false;
-	if ( $type != $unsafe_type ) {
-		$proper_filename = wp_maybe_fix_image_extension( $filename, $type );
-	}
+	// Attempt to correct the extension of image files.
+	$proper_filename = wp_maybe_fix_image_extension( $filename, $type );
 
 	// Update the extension if the file is renamed.
 	if ( $proper_filename ) {
@@ -2569,6 +2566,11 @@ function wp_is_file_type_allowed( $ext, $type ) {
  */
 function wp_maybe_fix_image_extension( $filename, $type ) {
 	$proper_filename = false;
+
+	// Bail early if this isn't an image file.
+	if ( 0 !== strpos( $type, 'image/' ) ) {
+		return $proper_filename;
+	}
 
 	/**
 	 * Filters the list mapping image mime types to their respective extensions.
