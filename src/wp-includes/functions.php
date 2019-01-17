@@ -2511,7 +2511,7 @@ function wp_check_filetype_and_ext( $file, $filename, $mimes = null ) {
 	// Maybe update the filename based on the mime type.
 	$proper_filename = false;
 	if ( $type != $unsafe_type ) {
-		$proper_filename = wp_maybe_rename_file( $filename, $type );
+		$proper_filename = wp_maybe_fix_image_extension( $filename, $type );
 	}
 
 	// Update the extension if the file is renamed.
@@ -2567,7 +2567,7 @@ function wp_is_file_type_allowed( $ext, $type ) {
  * @param string $type     The mime type of the file.
  * @return string|false A corrected filename or false if the filename was unchanged.
  */
-function wp_maybe_rename_file( $filename, $type ) {
+function wp_maybe_fix_image_extension( $filename, $type ) {
 	$proper_filename = false;
 
 	/**
