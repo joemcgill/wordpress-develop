@@ -1145,6 +1145,7 @@ class Tests_Functions extends WP_UnitTestCase {
 
 	/**
 	 * @ticket 39550
+	 * @group mimes
 	 * @dataProvider _wp_check_filetype_and_ext_data_allowed
 	 */
 	function test_wp_check_filetype_and_ext_allowed( $file, $filename, $expected ) {
@@ -1279,6 +1280,7 @@ class Tests_Functions extends WP_UnitTestCase {
 
 	/**
 	 * @ticket 39550
+	 * @group mimes
 	 * @dataProvider _wp_check_filetype_and_ext_data_unallowed
 	 */
 	function test_wp_check_filetype_and_ext_unallowed( $file, $filename ) {
@@ -1354,6 +1356,7 @@ class Tests_Functions extends WP_UnitTestCase {
 
 	/**
 	 * @ticket 39550
+	 * @group mimes
 	 * @group ms-excluded
 	 */
 	function test_wp_check_filetype_and_ext_with_filtered_svg() {
@@ -1374,11 +1377,17 @@ class Tests_Functions extends WP_UnitTestCase {
 		$this->assertEquals( $expected, wp_check_filetype_and_ext( $file, $filename ) );
 
 		// Cleanup.
-		remove_filter( 'upload_mimes', array( $this, '_test_add_mime_types_svg' ) );
+		remove_filter( 'upload_mimes', array( $this, '_filter_mime_types_svg' ) );
+	}
+
+	public function _filter_mime_types_svg( $mimes ) {
+		$mimes['svg'] = 'image/svg+xml';
+		return $mimes;
 	}
 
 	/**
 	 * @ticket 39550
+	 * @group mimes
 	 * @group ms-excluded
 	 */
 	function test_wp_check_filetype_and_ext_with_filtered_woff() {
@@ -1399,16 +1408,50 @@ class Tests_Functions extends WP_UnitTestCase {
 		$this->assertEquals( $expected, wp_check_filetype_and_ext( $file, $filename ) );
 
 		// Cleanup.
-		remove_filter( 'upload_mimes', array( $this, '_test_add_mime_types_woff' ) );
-	}
-
-	public function _filter_mime_types_svg( $mimes ) {
-		$mimes['svg'] = 'image/svg+xml';
-		return $mimes;
+		remove_filter( 'upload_mimes', array( $this, '_filter_mime_types_woff' ) );
 	}
 
 	public function _filter_mime_types_woff( $mimes ) {
 		$mimes['woff'] = 'application/font-woff';
+		return $mimes;
+	}
+
+	/**
+	 * @group ms-excluded
+	 * @group mimes
+	 * @ticket 40175
+	 * @ticket 45615
+	 */
+	function test_wp_check_filetype_and_ext_with_filtered_gpx() {
+		if ( ! extension_loaded( 'fileinfo' ) ) {
+			$this->markTestSkipped( 'The fileinfo PHP extension is not loaded.' );
+		}
+
+		$file     = DIR_TESTDATA . '/uploads/test.gpx';
+		$filename = 'test.gpx';
+
+		add_filter( 'wp_file_types', array( $this, '_filter_mime_types_gpx' ) );
+
+		$wp_check_file = wp_check_filetype_and_ext( $file, $filename );
+		$types         = wp_get_file_types();
+
+		// Check that the extension and proper_filename are what we expect.
+		$this->assertEquals( 'gpx', $wp_check_file['ext'], 'Extension does not match.' );
+		$this->assertFalse( $wp_check_file['proper_filename'], 'File not named correctly.' );
+
+		// Test that the actual file type is in the list of expected file types for that extension.
+		$this->assertTrue( in_array( $wp_check_file['type'], $types['gpx'], true ), 'This filetype is not allowed.' );
+
+		// Cleanup.
+		remove_filter( 'wp_file_types', array( $this, '_filter_mime_types_gpx' ) );
+	}
+
+	public function _filter_mime_types_gpx( $mimes ) {
+		$mimes['gpx'] = [
+			'application/xml',
+			'text/xml',
+		];
+
 		return $mimes;
 	}
 
