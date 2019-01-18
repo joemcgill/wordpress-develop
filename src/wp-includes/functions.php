@@ -2505,7 +2505,20 @@ function wp_check_filetype_and_ext( $file, $filename, $mimes = null ) {
 		return compact( 'ext', 'type', 'proper_filename' );
 	}
 
-	$ext  = pathinfo( $filename, PATHINFO_EXTENSION );
+	$ext = pathinfo( $filename, PATHINFO_EXTENSION );
+
+	/*
+	 * Backwards compatability for overriding the $mimes list.
+	 * This short-circuits real mime checks, so use with caution.
+	 */
+	if ( ! empty( $mimes ) ) {
+		$type            = ( isset( $mimes[ $ext ] ) ) ? $mimes[ $ext ] : false;
+		$ext             = ( ! empty( $type ) ) ? $ext : false;
+		$proper_filename = false;
+
+		return compact( 'ext', 'type', 'proper_filename' );
+	}
+
 	$type = wp_get_mime_type( $file );
 
 	// Attempt to correct the extension of image files.

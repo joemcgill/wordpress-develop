@@ -1491,6 +1491,54 @@ class Tests_Functions extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Tests compatability for the $mimes parameter in wp_check_filetype_and_ext().
+	 *
+	 * @group mimes
+	 * @ticket 40175
+	 * @dataProvider data_check_mimes_param()
+	 *
+	 * @param string      $file     A file path.
+	 * @param string      $filename A file name.
+	 * @param string|bool $type     The expected mime type returned by wp_check_filetype_and_ext().
+	 */
+	public function test_wp_check_filetype_and_ext_mimes_param( $file, $filename, $type ) {
+		if ( ! extension_loaded( 'fileinfo' ) ) {
+			$this->markTestSkipped( 'The fileinfo PHP extension is not loaded.' );
+		}
+
+		$checked = wp_check_filetype_and_ext( $file, $filename, array( 'png' => 'image/png' ) );
+
+		$this->assertTrue( $checked['type'] === $type  );
+	}
+
+	 /**
+	 * Data provider for test_wp_check_filetype_and_ext_mimes_param().
+	 *
+	 * @return array {
+	 *     @type array $0... {
+	 *         @type string      $0 File path.
+	 *         @type string      $1 File name.
+	 *         @type string|bool $2 Expected mime type result.
+	 *     }
+	 * }
+	 */
+	public function data_check_mimes_param() {
+		return array(
+			array(
+				DIR_TESTDATA . '/images/test-image.png',
+				'test-image.png',
+				'image/png',
+			),
+			array(
+				DIR_TESTDATA . '/images/test-image.jpg',
+				'test-image.jpg',
+				false,
+			),
+		);
+	}
+
+
+	/**
 	 * Test file path validation
 	 *
 	 * @ticket 42016
