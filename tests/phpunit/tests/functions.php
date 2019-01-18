@@ -1213,15 +1213,15 @@ class Tests_Functions extends WP_UnitTestCase {
 				$data,
 				array(
 					// Standard non-image file.
-					 array(
-						 DIR_TESTDATA . '/formatting/big5.txt',
-						 'big5.txt',
-						 array(
-							 'ext'             => 'txt',
-							 'type'            => 'text/plain',
-							 'proper_filename' => false,
-						 ),
-					 ),
+					array(
+						DIR_TESTDATA . '/formatting/big5.txt',
+						'big5.txt',
+						array(
+							'ext'             => 'txt',
+							'type'            => 'text/plain',
+							'proper_filename' => false,
+						),
+					),
 					// Non-image file with wrong sub-type.
 					array(
 						DIR_TESTDATA . '/uploads/pages-to-word.docx',
@@ -1508,10 +1508,10 @@ class Tests_Functions extends WP_UnitTestCase {
 
 		$checked = wp_check_filetype_and_ext( $file, $filename, array( 'png' => 'image/png' ) );
 
-		$this->assertTrue( $checked['type'] === $type  );
+		$this->assertTrue( $checked['type'] === $type );
 	}
 
-	 /**
+	/**
 	 * Data provider for test_wp_check_filetype_and_ext_mimes_param().
 	 *
 	 * @return array {
