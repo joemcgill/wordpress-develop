@@ -2519,7 +2519,8 @@ function wp_check_filetype_and_ext( $file, $filename, $mimes = null ) {
 		return compact( 'ext', 'type', 'proper_filename' );
 	}
 
-	$type = wp_get_mime_type( $file );
+	// Save the $real_type for filters.
+	$type = $real_mime = wp_get_mime_type( $file );
 
 	// Attempt to correct the extension of image files.
 	$proper_filename = wp_maybe_fix_image_extension( $filename, $type );
