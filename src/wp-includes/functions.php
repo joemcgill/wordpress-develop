@@ -740,7 +740,7 @@ function do_enclose( $content, $post_ID ) {
 				if ( false !== $url_parts ) {
 					$extension = pathinfo( $url_parts['path'], PATHINFO_EXTENSION );
 					if ( ! empty( $extension ) ) {
-						foreach ( wp_get_mime_types() as $exts => $mime ) {
+						foreach ( wp_get_ext_mimes() as $exts => $mime ) {
 							if ( preg_match( '!^(' . $exts . ')$!i', $extension ) ) {
 								$type = $mime;
 								break;
@@ -3564,35 +3564,6 @@ function wp_get_file_types() {
 /**
  * Retrieve list of mime types for file extensions.
  *
- * @since 3.5.0
- * @since 4.2.0 Support was added for GIMP (xcf) files.
- * @deprecated X.X.X Use wp_get_file_types()
- * @see wp_get_file_types()
-
- *
- * @return array Array of mime types keyed by the file extension regex corresponding to those types.
- */
-function wp_get_mime_types() {
-	// _deprecated_function( __FUNCTION__, 'X.X.X', 'wp_get_file_types()' );
-
-	$mimes = wp_get_ext_mimes();
-
-	/**
-	 * Filters the list of mime types and file extensions.
-	 *
-	 * This filter should be used to add, not remove, mime types.
-	 *
-	 * @since 3.5.0
-	 *
-	 * @param array $wp_get_mime_types Mime types keyed by the file extension regex
-	 *                                 corresponding to those types.
-	 */
-	return apply_filters( 'mime_types', $mimes );
-}
-
-/**
- * Retrieve list of mime types for file extensions.
- *
  * @since X.X.X
  *
  * @return array Array of mime types keyed by the file extension regex corresponding to those types.
@@ -3786,42 +3757,6 @@ function wp_get_allowed_file_types( $user = null ) {
 	 * @param int|WP_User|null $user  User ID, User object or null if not provided (indicates current user).
 	 */
 	return apply_filters( 'wp_allowed_file_types', $mimes, $user );
-}
-
-/**
- * Retrieve list of allowed mime types and file extensions.
- *
- * @since 2.8.6
- *
- * @param int|WP_User $user Optional. User to check. Defaults to current user.
- * @return array Array of mime types keyed by the file extension regex corresponding
- *               to those types.
- */
-function get_allowed_mime_types( $user = null ) {
-	// _deprecated_function( __FUNCTION__, 'X.X.X', 'wp_get_allowed_file_types()' );
-
-	$t = wp_get_mime_types();
-
-	unset( $t['swf'], $t['exe'] );
-	if ( function_exists( 'current_user_can' ) ) {
-		$unfiltered = $user ? user_can( $user, 'unfiltered_html' ) : current_user_can( 'unfiltered_html' );
-	}
-
-	if ( empty( $unfiltered ) ) {
-		unset( $t['htm|html'], $t['js'] );
-	}
-
-	/**
-	 * Filters list of allowed mime types and file extensions.
-	 *
-	 * @since 2.0.0
-	 *
-	 * @param array            $t    Mime types keyed by the file extension regex corresponding to
-	 *                               those types. 'swf' and 'exe' removed from full list. 'htm|html' also
-	 *                               removed depending on '$user' capabilities.
-	 * @param int|WP_User|null $user User ID, User object or null if not provided (indicates current user).
-	 */
-	return apply_filters( 'upload_mimes', $t, $user );
 }
 
 /**
