@@ -1133,14 +1133,14 @@ class Tests_Functions extends WP_UnitTestCase {
 
 	/**
 	 * @ticket 40017
-	 * @dataProvider _wp_get_image_mime
+	 * @dataProvider _wp_check_image_mime
 	 */
-	public function test_wp_get_image_mime( $file, $expected ) {
+	public function test_wp_check_image_mime( $file, $expected ) {
 		if ( ! is_callable( 'exif_imagetype' ) && ! function_exists( 'getimagesize' ) ) {
 			$this->markTestSkipped( 'The exif PHP extension is not loaded.' );
 		}
 
-		$this->assertEquals( $expected, wp_get_image_mime( $file ) );
+		$this->assertEquals( $expected, wp_check_image_mime( $file ) );
 	}
 
 	/**
@@ -1456,9 +1456,9 @@ class Tests_Functions extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Data provider for test_wp_get_image_mime();
+	 * Data provider for test_wp_check_image_mime();
 	 */
-	public function _wp_get_image_mime() {
+	public function _wp_check_image_mime() {
 		$data = array(
 			// Standard JPEG.
 			array(

@@ -2455,22 +2455,45 @@ function wp_ext2type( $ext ) {
  * @return array Values with extension first and mime type.
  */
 function wp_check_filetype( $filename, $mimes = null ) {
-	if ( empty( $mimes ) ) {
-		$mimes = get_allowed_mime_types();
-	}
 	$type = false;
 	$ext  = false;
 
-	foreach ( $mimes as $ext_preg => $mime_match ) {
-		$ext_preg = '!\.(' . $ext_preg . ')$!i';
-		if ( preg_match( $ext_preg, $filename, $ext_matches ) ) {
-			$type = $mime_match;
-			$ext  = $ext_matches[1];
-			break;
+	// Fallback when checking extensions against a known mimes list.
+	if ( ! empty( $mimes ) ) {
+		foreach ( $mimes as $ext_preg => $mime_match ) {
+			$ext_preg = '!\.(' . $ext_preg . ')$!i';
+			if ( preg_match( $ext_preg, $filename, $ext_matches ) ) {
+				$type = $mime_match;
+				$ext  = $ext_matches[1];
+				break;
+			}
+		}
+	} else {
+		// Add the fallback extension to MIME guesser.
+		add_filter( 'wp_mime_guessers', '_wp_add_ext_mime_guesser' );
+		$type = wp_check_mime_type( $filename );
+		// Remove the fallback extension to MIME guesser.
+		remove_filter( 'wp_mime_guessers', '_wp_add_ext_mime_guesser' );
+
+		// If we've found a matching MIME type, also report the extension.
+		if ( $type ) {
+			$ext = pathinfo( $filename, PATHINFO_EXTENSION );
 		}
 	}
 
 	return compact( 'ext', 'type' );
+}
+
+/**
+ * Add the fallback extension to MIME guesser to the list of registered MIME guessers.
+ *
+ * @param array $guessers A list of registered MIME guessers.
+ * @return array The filtered list of guessers.
+ */
+function _wp_add_ext_mime_guesser( $guessers ) {
+	$guessers[] = 'wp_check_ext_mime';
+
+	return $guessers;
 }
 
 /**
@@ -2481,7 +2504,7 @@ function wp_check_filetype( $filename, $mimes = null ) {
  * If it's determined that the extension does not match the file's real type,
  * then the "proper_filename" value will be set with a proper filename and extension.
  *
- * Currently this function only supports renaming images validated via wp_get_image_mime().
+ * Currently this function only supports renaming images validated via wp_check_image_mime().
  *
  * @since 3.0.0
  *
@@ -2520,7 +2543,7 @@ function wp_check_filetype_and_ext( $file, $filename, $mimes = null ) {
 	}
 
 	// Save the $real_type for filters.
-	$type = $real_mime = wp_get_mime_type( $file );
+	$type = $real_mime = wp_check_mime_type( $file );
 
 	// Attempt to correct the extension of image files.
 	$proper_filename = wp_maybe_fix_image_extension( $filename, $type );
@@ -2631,10 +2654,10 @@ function wp_maybe_fix_image_extension( $filename, $type ) {
  * @param string $file Full path to the file to be checked.
  * @return string The mime type value. Note that 'application/octet-stream' is a generic file.
  */
-function wp_get_mime_type( $file ) {
+function wp_check_mime_type( $file ) {
 	$mime_guessers = array(
-		'wp_get_image_mime',
-		'wp_get_file_mime',
+		'wp_check_image_mime',
+		'wp_check_file_mime',
 	);
 
 	/**
@@ -2673,7 +2696,7 @@ function wp_get_mime_type( $file ) {
  * @param string $file Full path to the file.
  * @return string|false The actual mime type or false if the type cannot be determined.
  */
-function wp_get_image_mime( $file ) {
+function wp_check_image_mime( $file ) {
 	// Determine the filetype
 	$ext  = pathinfo( $file, PATHINFO_EXTENSION );
 	$type = wp_ext2type( $ext );
@@ -2717,7 +2740,7 @@ function wp_get_image_mime( $file ) {
  * @param string $file Full path to the file.
  * @return string|false The actual mime type or false if the type cannot be determined.
  */
-function wp_get_file_mime( $file ) {
+function wp_check_file_mime( $file ) {
 	// Try to validate the file if we don't have a real mime already.
 	if ( ! extension_loaded( 'fileinfo' ) ) {
 		return false;
@@ -2733,6 +2756,22 @@ function wp_get_file_mime( $file ) {
 
 	// An application/octet-stream value means the value wasn't determined.
 	return ( 'application/octet-stream' === $mime_type ) ? false : $mime_type;
+}
+
+/**
+ * Rerturns a default mime type of a file based on its extension.
+ *
+ * @since X.X.X
+ *
+ * @param string $file File name or path for a file.
+ * @return string|false The actual mime type or false if the type cannot be determined.
+ */
+function wp_check_ext_mime( $file ) {
+	$ext_mimes = wp_get_ext_mimes();
+
+	$filetype = wp_check_filetype( $file, $ext_mimes );
+
+	return $filetype['type'];
 }
 
 /**
@@ -3523,7 +3562,7 @@ function wp_get_file_types() {
 }
 
 /**
- * Retrieve list of mime types and file extensions.
+ * Retrieve list of mime types for file extensions.
  *
  * @since 3.5.0
  * @since 4.2.0 Support was added for GIMP (xcf) files.
@@ -3536,19 +3575,41 @@ function wp_get_file_types() {
 function wp_get_mime_types() {
 	// _deprecated_function( __FUNCTION__, 'X.X.X', 'wp_get_file_types()' );
 
+	$mimes = wp_get_ext_mimes();
+
 	/**
 	 * Filters the list of mime types and file extensions.
 	 *
-	 * This filter should be used to add, not remove, mime types. To remove
-	 * mime types, use the {@see 'upload_mimes'} filter.
+	 * This filter should be used to add, not remove, mime types.
 	 *
 	 * @since 3.5.0
 	 *
 	 * @param array $wp_get_mime_types Mime types keyed by the file extension regex
 	 *                                 corresponding to those types.
 	 */
+	return apply_filters( 'mime_types', $mimes );
+}
+
+/**
+ * Retrieve list of mime types for file extensions.
+ *
+ * @since X.X.X
+ *
+ * @return array Array of mime types keyed by the file extension regex corresponding to those types.
+ */
+function wp_get_ext_mimes() {
+	/**
+	 * Filters the list of mime types and file extensions.
+	 *
+	 * This filter should be used to add, not remove, mime types.
+	 *
+	 * @since X.X.X
+	 *
+	 * @param array $wp_get_ext_mimes  Mime types keyed by the file extension regex
+	 *                                 corresponding to those types.
+	 */
 	return apply_filters(
-		'mime_types',
+		'ext_mime_types',
 		array(
 			// Image formats.
 			'jpg|jpeg|jpe'                 => 'image/jpeg',
