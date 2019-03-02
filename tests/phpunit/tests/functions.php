@@ -1802,4 +1802,31 @@ class Tests_Functions extends WP_UnitTestCase {
 			array( '03:61:59', false ), // Out of bound.
 		);
 	}
+
+
+	/**
+	 * Unit test for wp_check_filetype.
+	 *
+	 * @dataProvider data_test_wp_check_filetype
+	 * @group test
+	 * @param string $filename A filename or path to a filename.
+	 * @param array  $expected The expected output from wp_check_filetype().
+	 */
+	function test_wp_check_filetype( $filename, $expected ) {
+		$actual = wp_check_filetype( $filename );
+
+		$this->assertEquals( $expected, $actual );
+	}
+
+	function data_test_wp_check_filetype() {
+		return array(
+			array(
+				'test.jpg',
+				array(
+					'ext'  => 'jpg',
+					'type' => 'image/jpeg',
+				),
+			)
+		);
+	}
 }

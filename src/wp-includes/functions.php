@@ -2671,7 +2671,8 @@ function wp_check_mime_type( $file ) {
 	 * @param array  $mime_guessers List of supported mime guessing callback functions.
 	 * @param string $file          Full path to the file.
 	 */
-	apply_filters( 'wp_mime_guessers', $mime_guessers, $file );
+	$mime_guessers = apply_filters( 'wp_mime_guessers', $mime_guessers, $file );
+
 
 	foreach ( $mime_guessers as $guesser ) {
 		$mime_type = call_user_func( $guesser, $file );
